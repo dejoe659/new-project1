@@ -1,0 +1,4 @@
+-- Already applied to Supabase project dcf-unn. Kept here for reference.
+-- Tables: members, testimonies, events, gallery. RLS on; the public (anon) key can only
+-- INSERT pending registrations/testimonies and SELECT approved rows and safe columns.
+-- Approve a testimony: set testimonies.status='approved'. Show a member: set members.profile_approved=true.
