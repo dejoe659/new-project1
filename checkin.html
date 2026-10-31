@@ -1,0 +1,23 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Check in | DCF UNN</title><meta name="theme-color" content="#14451f">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;800&family=Libre+Franklin:wght@400;500;600&display=swap"><link rel="stylesheet" href="/assets/style.css"></head><body>
+<header class="top"><a class="brand" href="/"><img class="logo" src="/assets/logo.jpg" alt="DCF logo" width="40" height="40"><span>DCF UNN</span></a><a class="btn sm" href="/">Home</a></header>
+<main><section class="narrow"><h1>Check in</h1><p>Enter the code shown at the service and the phone number you registered with.</p>
+<form id="ci" class="form" novalidate><label>Service code<input id="code" inputmode="numeric" autocomplete="off" required></label><label>Phone number<input id="phone" type="tel" required placeholder="08012345678"></label>
+<div id="vis" hidden><p><strong>We could not find that number.</strong> If you are new, add your name to check in as a visitor.</p><label>Your name<input id="name"></label></div>
+<button class="btn">Check in</button><p class="msg" id="m" role="status"></p></form>
+<p>Not registered yet? <a href="/contact#join">Join the fellowship</a>.</p></section></main>
+<script>
+const U="https://takdaiqvaxancqrqwwhy.supabase.co",K="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRha2RhaXF2YXhhbmNxcnF3d2h5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyMDkyNDUsImV4cCI6MjEwODc4NTI0NX0.cMNEb_tr1gRtVRwJa5kQqvqctyR9UjdroJ34umG4L8Q";
+const $=s=>document.querySelector(s),m=$("#m");let visitor=false;
+const c=new URLSearchParams(location.search).get("code");if(c)$("#code").value=c.replace(/\D/g,"");
+const rpc=async(fn,body)=>{const r=await fetch(U+"/rest/v1/rpc/"+fn,{method:"POST",headers:{apikey:K,Authorization:"Bearer "+K,"Content-Type":"application/json"},body:JSON.stringify(body)});if(!r.ok)throw new Error("Network error");return r.json()};
+const say=(t,ok)=>{m.textContent=t;m.className="msg "+(ok?"ok":"err")};
+$("#ci").onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector("button");b.disabled=true;say("");
+ try{const code=$("#code").value.trim(),phone=$("#phone").value.trim();
+  const r=visitor?await rpc("check_in_visitor",{p_code:code,p_name:$("#name").value,p_phone:phone}):await rpc("check_in",{p_code:code,p_phone:phone});
+  const msg={bad_code:"That code is wrong or the service is closed. Ask a leader.",bad_phone:"Enter your full phone number.",bad_name:"Enter your name."}[r.status];
+  if(r.status==="not_found"){visitor=true;$("#vis").hidden=false;say("Add your name below, then tap Check in again.")}
+  else if(r.status==="ok"){say("Welcome, "+r.name+"! You are checked in for "+r.kind+".",true);e.target.querySelector("button").hidden=true}
+  else say(msg||"Something went wrong. Try again.")}
+ catch(x){say("Could not check in. Check your network and try again.")}finally{b.disabled=false}};
+</script></body></html>
