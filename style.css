@@ -1,0 +1,40 @@
+:root{--navy:#14451f;--gold:#e3a21a;--grey:#f3f6ee;--ink:#16202e;--w:#fff}
+*{box-sizing:border-box}body{margin:0;font:16px/1.6 "Libre Franklin",system-ui,sans-serif;color:var(--ink);background:var(--w)}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;line-height:1.15;color:var(--navy)}h1{font-size:clamp(2.2rem,6vw,4rem);font-weight:800;margin:.2em 0}h2{font-size:1.7rem}
+a{color:var(--navy)}:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.7rem 1.2rem;background:var(--navy)}
+.top a{color:var(--w);text-decoration:none}.brand{display:flex;gap:.6rem;align-items:center;font-weight:600}
+.logo{display:grid;place-items:center;width:2.4rem;height:2.4rem;border:2px dashed var(--gold);color:var(--gold);font-size:.7rem;font-weight:600}
+nav{display:flex;gap:1.1rem;align-items:center}nav a[aria-current]{color:var(--gold)}.menu{display:none}
+.btn{display:inline-block;background:var(--gold);color:var(--navy)!important;border:0;padding:.8rem 1.4rem;font:600 1rem inherit;font-family:inherit;border-radius:3px;cursor:pointer;text-decoration:none}
+.btn.sm{padding:.4rem .9rem}.btn.ghost{background:none;border:2px solid var(--navy);color:var(--navy)!important}
+section{padding:3rem 1.2rem;max-width:1100px;margin:auto}.narrow{max-width:680px}
+.hero{display:grid;grid-template-columns:1.1fr 1fr;gap:2.5rem;align-items:center;padding-top:4rem}.sub{color:#8a6d00;font-weight:600;margin:0}.lead{font-size:1.2rem;max-width:34ch}
+.photo{aspect-ratio:4/3;background:var(--grey);border:2px dashed var(--gold);display:grid;place-items:center;text-align:center;padding:1rem;color:#55627a}
+.sched{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
+.sched article{background:var(--navy);color:var(--w);padding:1.4rem;border-left:5px solid var(--gold)}.sched h3{color:var(--gold);margin:0}.sched .k{font-size:1.2rem;margin:.2rem 0}.sched .t{font:800 2rem Fraunces,serif;margin:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem}.card{background:var(--grey);padding:1.2rem}.card h3{margin-top:0}.card small{color:#55627a}
+.photos img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}.empty{color:#55627a;grid-column:1/-1}
+.form{display:grid;gap:1rem}label{display:grid;gap:.3rem;font-weight:500}input,select,textarea{padding:.7rem;border:1px solid #b9c1cf;border-radius:3px;font:inherit}
+.ck{display:flex;gap:.6rem;align-items:flex-start;font-weight:400}.hp{position:absolute;left:-9999px}.msg{margin:0;font-weight:600}.msg.err{color:#a11}.msg.ok{color:#0a6b2d}
+.search{width:100%;max-width:420px;margin:1rem 0}.chips{display:flex;gap:.5rem;flex-wrap:wrap;margin:1rem 0}.chips button{border:1px solid var(--navy);background:none;padding:.3rem .8rem;border-radius:99px;cursor:pointer}.chips .on{background:var(--navy);color:var(--w)}
+footer{background:var(--navy);color:#dfe5ef;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.5rem;padding:2rem 1.2rem}footer a{color:var(--gold)}
+@media(max-width:760px){.hero{grid-template-columns:1fr}.menu{display:block;background:none;color:var(--w);border:1px solid var(--gold);padding:.4rem .8rem}
+nav{display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy);flex-direction:column;align-items:flex-start;padding:1rem 1.2rem}nav.open{display:flex}}
+
+.logo{border:0!important;border-radius:50%;object-fit:cover;background:#fff}
+img.photo{width:100%;height:auto;border:0;padding:0;object-fit:cover;border-radius:4px}
+.band{max-width:none;background:var(--gold);padding:1.1rem 1.2rem}.band p{max-width:1100px;margin:auto;font:800 clamp(1.1rem,3vw,1.6rem) Fraunces,serif;color:var(--navy);text-align:center}
+.big{font:600 1.3rem/1.5 Fraunces,serif}.mission li{margin:.5rem 0}.band2{font:800 1.2rem Fraunces,serif;color:#8a6d00;border-top:2px solid var(--gold);padding-top:1rem}
+figure.card{margin:0;padding:0}figure.card figcaption{padding:.6rem 1rem}
+
+.herobg{max-width:none;padding:6rem 1.2rem 5rem;color:#fff;background:linear-gradient(rgba(14,58,26,.80),rgba(14,58,26,.86)),url(/assets/service-worship.jpg) center/cover no-repeat}
+.herobg .wrap{max-width:1100px;margin:auto}.herobg h1,.herobg .lead{color:#fff}.herobg .sub{color:var(--gold)}.herobg .btn.ghost{border-color:#fff;color:#fff!important}
+
+.herobg{border-bottom:6px solid var(--gold)}.herobg .sub{color:#ffd777}
+
+.social{display:flex;gap:.8rem;margin:0 0 .8rem}.social a{width:2.8rem;height:2.8rem;display:grid;place-items:center;border:2px solid var(--gold);border-radius:50%;color:var(--gold);transition:background .15s,color .15s}.social a:hover,.social a:focus-visible{background:var(--gold);color:var(--navy)}.social svg{width:1.45rem;height:1.45rem}
+main .social a{color:var(--navy);border-color:var(--navy)}main .social a:hover{background:var(--navy);color:#fff}
+.btn svg{width:1.1rem;height:1.1rem;vertical-align:-.2em;margin-right:.45rem}
+
+.opts{border:1px solid #b9c1cf;border-radius:3px;padding:.8rem 1rem;margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.5rem 1rem}.opts legend{font-weight:500;padding:0 .4rem}
