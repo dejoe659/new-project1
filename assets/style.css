@@ -21,15 +21,18 @@ section{padding:3rem 1.2rem;max-width:1100px;margin:auto}.narrow{max-width:680px
 footer{background:var(--navy);color:#dfe5ef;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.5rem;padding:2rem 1.2rem}footer a{color:var(--gold)}
 @media(max-width:760px){.hero{grid-template-columns:1fr}.menu{display:block;background:none;color:var(--w);border:1px solid var(--gold);padding:.4rem .8rem}
 nav{display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy);flex-direction:column;align-items:flex-start;padding:1rem 1.2rem}nav.open{display:flex}}
- 
+
 .logo{border:0!important;border-radius:50%;object-fit:cover;background:#fff}
 img.photo{width:100%;height:auto;border:0;padding:0;object-fit:cover;border-radius:4px}
 .band{max-width:none;background:var(--gold);padding:1.1rem 1.2rem}.band p{max-width:1100px;margin:auto;font:800 clamp(1.1rem,3vw,1.6rem) Fraunces,serif;color:var(--navy);text-align:center}
 .big{font:600 1.3rem/1.5 Fraunces,serif}.mission li{margin:.5rem 0}.band2{font:800 1.2rem Fraunces,serif;color:#8a6d00;border-top:2px solid var(--gold);padding-top:1rem}
 figure.card{margin:0;padding:0}figure.card figcaption{padding:.6rem 1rem}
- 
+
 .herobg{max-width:none;padding:6rem 1.2rem 5rem;color:#fff;background:linear-gradient(rgba(14,58,26,.80),rgba(14,58,26,.86)),url(/assets/service-worship.jpg) center/cover no-repeat}
 .herobg .wrap{max-width:1100px;margin:auto}.herobg h1,.herobg .lead{color:#fff}.herobg .sub{color:var(--gold)}.herobg .btn.ghost{border-color:#fff;color:#fff!important}
- 
+
 .herobg{border-bottom:6px solid var(--gold)}.herobg .sub{color:#ffd777}
- 
+
+.social{display:flex;gap:.8rem;margin:0 0 .8rem}.social a{width:2.8rem;height:2.8rem;display:grid;place-items:center;border:2px solid var(--gold);border-radius:50%;color:var(--gold);transition:background .15s,color .15s}.social a:hover,.social a:focus-visible{background:var(--gold);color:var(--navy)}.social svg{width:1.45rem;height:1.45rem}
+main .social a{color:var(--navy);border-color:var(--navy)}main .social a:hover{background:var(--navy);color:#fff}
+.btn svg{width:1.1rem;height:1.1rem;vertical-align:-.2em;margin-right:.45rem}
