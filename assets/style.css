@@ -36,3 +36,5 @@ figure.card{margin:0;padding:0}figure.card figcaption{padding:.6rem 1rem}
 .social{display:flex;gap:.8rem;margin:0 0 .8rem}.social a{width:2.8rem;height:2.8rem;display:grid;place-items:center;border:2px solid var(--gold);border-radius:50%;color:var(--gold);transition:background .15s,color .15s}.social a:hover,.social a:focus-visible{background:var(--gold);color:var(--navy)}.social svg{width:1.45rem;height:1.45rem}
 main .social a{color:var(--navy);border-color:var(--navy)}main .social a:hover{background:var(--navy);color:#fff}
 .btn svg{width:1.1rem;height:1.1rem;vertical-align:-.2em;margin-right:.45rem}
+
+.avatar{width:96px;height:96px;border-radius:50%;object-fit:cover;background:var(--grey);display:block;margin:0 0 .7rem;border:3px solid var(--gold)}

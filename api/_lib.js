@@ -18,6 +18,7 @@ const handler=(cfg)=>async(req,res)=>{
   for(const k of cfg.consent||[])if(b[k]!==true)return res.status(400).json({error:"Consent is required."});
   if(cfg.table)await db(cfg.table,{method:"POST",body:JSON.stringify(cfg.row?cfg.row(d,b):d)});
   await mail(cfg.subject(d),Object.entries(d).map(([k,v])=>k+": "+v).join("\n"));
+  if(cfg.after)await cfg.after(d,b); // optional hook, e.g. welcome message
   res.status(200).json({message:cfg.ok});
  }catch(e){console.error(e);res.status(500).json({error:"Server error."})}};
-module.exports={db,handler};
+module.exports={db,handler,K};
