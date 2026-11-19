@@ -33,11 +33,30 @@ const sendWhatsApp=async(m,text)=>{
   body:JSON.stringify({messaging_product:"whatsapp",to:intl(m.phone),type:"template",template:{name:E.WHATSAPP_TEMPLATE,language:{code:E.WHATSAPP_LANG||"en"},components:[{type:"body",parameters:[{type:"text",text:oneLine(text).slice(0,900)}]}]}})});
  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error((j.error&&j.error.message)||"whatsapp "+r.status);return{ok:true}};
 
+// Who may be messaged, and on which channel. Fails closed: if consent cannot be checked, nothing is sent.
+//  - member.consent  : explicit consent just given on the join form ({email,sms,whatsapp} booleans)
+//  - member.id       : read the member's saved per-channel consent and global opt-out
+//  - member.attendance_id : a visitor, who agreed to SMS / WhatsApp on the check-in page
+const consentFor=async m=>{
+ if(m.consent)return{map:m.consent};
+ if(m.id){if(!SRV)return{deny:"consent check unavailable"};
+  const r=await srv(`member_preferences?member_id=eq.${m.id}&select=whatsapp_opt_in,sms_opt_in,email_opt_in,opted_out&limit=1`);
+  if(!r.length)return{deny:"no consent record"};const p=r[0];if(p.opted_out)return{deny:"member opted out"};
+  return{map:{whatsapp:p.whatsapp_opt_in,sms:p.sms_opt_in,email:p.email_opt_in}}}
+ if(m.attendance_id)return{map:{sms:true,whatsapp:true,email:false}};
+ return{deny:"no consent record"}};
+const addrOf=(ch,m)=>ch==="email"?String(m.email||"").trim().toLowerCase():intl(m.phone);
+const suppressed=async(ch,a)=>{if(!SRV||!a)return false;
+ return (await srv(`contact_suppressions?address=eq.${encodeURIComponent(a)}&channel=in.(${ch},all)&select=id&limit=1`)).length>0};
+
 // member: {id?, full_name, email, phone}. Returns {email:"sent|failed|skipped", sms:..., whatsapp:...}. Never throws.
 const sendAll=async({member,channels,subject,message,kind})=>{
  const text=fill(message,member),out={};
+ let c;try{c=await consentFor(member)}catch(e){console.error("consent lookup failed:",e.message);c={deny:"consent check failed"}}
  await Promise.all(channels.map(async ch=>{let st="sent",detail=null;
-  try{const r=ch==="email"?await sendEmail(member,subject||"A message from DCF UNN",text):ch==="sms"?await sendSms(member,text):ch==="whatsapp"?await sendWhatsApp(member,text):{skipped:"unknown channel"};
+  try{let why=c.deny||(c.map&&c.map[ch]?null:"no consent for "+ch);
+   if(!why){try{if(await suppressed(ch,addrOf(ch,member)))why="contact opted out"}catch(e){why="opt-out check failed"}}
+   const r=why?{skipped:why}:ch==="email"?await sendEmail(member,subject||"A message from DCF UNN",text):ch==="sms"?await sendSms(member,text):ch==="whatsapp"?await sendWhatsApp(member,text):{skipped:"unknown channel"};
    if(r.skipped){st="skipped";detail=r.skipped}}catch(e){st="failed";detail=String(e.message).slice(0,300);console.error(ch,"failed:",detail)}
   out[ch]=st;
   if(st!=="skipped"&&SRV)try{await srv("message_log",{method:"POST",body:JSON.stringify({member_id:member.id||null,attendance_id:member.attendance_id||null,recipient_name:member.full_name||null,recipient:ch==="email"?member.email:member.phone,channel:ch,kind,status:st,detail})})}catch(e){console.error("log failed",e.message)}}));

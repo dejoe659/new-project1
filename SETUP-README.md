@@ -1,3 +1,31 @@
+# PHASE 2: consent, queue and database foundation (AI Communication Centre)
+
+Nothing in this phase sends new messages. It prepares the database and makes consent safe.
+
+## What changed
+- **Consent is per channel.** The join form now asks which of WhatsApp, SMS and Email the person agrees to (nothing is pre-ticked). The old single "I agree" box is gone. Ticking nothing is allowed and means no messages.
+- **Existing members:** their earlier consent carries over to all three channels and is marked "legacy" so you can always tell it apart from new, per-channel consent.
+- **Every send is checked** against the member's saved consent, a global opt-out, and a suppression list. If consent cannot be checked, nothing is sent.
+- **New optional field:** hostel or residential address.
+- **Security fix:** a public sign-up could set its own `review_status`. It can no longer.
+- **The welcome message is now OFF until you set `AUTO_WELCOME=on`** in Vercel. Keep `AUTO_FOLLOWUP` and `AUTO_VISITOR_THANKS` off as well until testing is done.
+- **New tables:** member_preferences, contact_suppressions, communication_settings, automation_rules (all six seeded as disabled), message_templates (7 starter templates), meeting_schedule (your four weekly meetings, editable), meeting_exceptions, campaigns, message_queue, message_approvals, provider_webhooks, admin_audit_logs. The existing `message_log` was extended, not duplicated.
+- **Roles:** `super_admin` can do everything; `content_admin` can edit drafts, templates, the schedule and consent; `moderator` is read-only. Approving and sending will always be checked on the server (Phases 4 to 5).
+
+## How to apply (in this order)
+1. **Supabase > SQL Editor > New query.** Paste the whole of `supabase/migrations/20261119120000_phase2_communication_foundation.sql` and click Run. It is safe to run twice. You should see "Success".
+2. **GitHub > Add file > Upload files.** Drag in the contents of the Phase 2 zip (keep the folders) and commit. Vercel redeploys.
+3. **Check it worked.** Register a test member on `/contact#join`, tick only Email, then in Supabase run:
+   `select m.full_name, p.whatsapp_opt_in, p.sms_opt_in, p.email_opt_in, p.consent_source from member_preferences p join members m on m.id = p.member_id order by m.created_at desc;`
+   Your old members show `legacy_general_consent`; the new one shows only email = true.
+4. **Admin > Registrations** now shows "May be contacted by" on each member.
+
+## Tests
+`npm install` then `npm test` runs 17 automated tests (consent, opt-out, fail-closed behaviour, registration, welcome switch). They use mocked providers, so nothing real is ever sent.
+
+## Rollback
+The migration only adds tables, columns and policies. To undo the registration change, redeploy the previous commit; the new tables can stay unused.
+
 # DCF UNN update: Friday Prayer, member photos, follow-up messages
 
 ## What changed

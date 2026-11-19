@@ -38,3 +38,5 @@ main .social a{color:var(--navy);border-color:var(--navy)}main .social a:hover{b
 .btn svg{width:1.1rem;height:1.1rem;vertical-align:-.2em;margin-right:.45rem}
 
 .avatar{width:96px;height:96px;border-radius:50%;object-fit:cover;background:var(--grey);display:block;margin:0 0 .7rem;border:3px solid var(--gold)}
+
+fieldset.opts{border:1px solid rgba(20,69,31,.25);border-radius:10px;padding:.7rem .9rem;margin:.4rem 0}fieldset.opts legend{font-weight:600;padding:0 .3rem}fieldset.opts small{display:block;margin-top:.3rem}
