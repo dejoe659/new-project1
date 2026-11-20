@@ -1,3 +1,23 @@
+# PHASE 4: approvals (nothing is sent yet)
+
+## What changed
+- **New admin tab: Approvals.** A leader writes an announcement once (email, SMS and/or WhatsApp wording), chooses the audience (everyone who agreed, or by level / department) and an optional send time, and saves it as a **draft**. They press **Submit for approval**. A super admin reads it and presses **Approve** or **Send back** (a reason is required). **History** shows who did what and when.
+- **Nothing is sent in this phase.** Approved messages simply wait with the status *Approved* or *Approved and scheduled*. Sending, retries and scheduling arrive in Phase 5, and will still be blocked by test mode until you open it.
+- **Roles are checked on the server**, never in the browser: `super_admin` can do everything; `content_admin` can write, submit and cancel but cannot approve; `moderator` can only view.
+- **An approval covers exactly what the approver saw.** If anyone edits the message after the approver opened it, the approval is refused and they are asked to reload. Editing a message that is waiting for approval sends it back to draft.
+- **Approved messages are locked.** They can only be cancelled, not edited.
+- Every step is written to `message_approvals` (with before/after wording for edits) and to `admin_audit_logs`.
+
+## How to apply
+No new database change is needed (the tables came with Phase 2). Push to GitHub as usual; the only requirement is `SUPABASE_SERVICE_ROLE_KEY` in Vercel (the page says so if it is missing).
+
+## Limits you should know about
+- A super admin can approve their own draft. If you want a second person to always approve, say so and it is a small change.
+- The history trail is saved right after the status change, not in the same database step. If saving the trail ever fails, it is reported in the Vercel logs.
+
+## Tests
+`npm test` now runs 72 tests, 18 of them for this phase (roles, version check, locking, validation).
+
 # PHASE 3: provider connections, delivery tracking, opt-outs and test mode
 
 ## What changed

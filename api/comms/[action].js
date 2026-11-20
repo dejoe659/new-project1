@@ -4,6 +4,7 @@ const routes = {
   "whatsapp-webhook": require("../_comms/whatsapp-webhook"),
   "termii-webhook": require("../_comms/termii-webhook"),
   unsubscribe: require("../_comms/unsubscribe"),
+  campaigns: require("../_comms/campaigns"),
 };
 module.exports = async (req, res) => {
   const h = routes[String((req.query && req.query.action) || "")];
