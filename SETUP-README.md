@@ -1,3 +1,61 @@
+# PHASE 3: provider connections, delivery tracking, opt-outs and test mode
+
+## What changed
+- **Three independent provider adapters** (Gmail, Termii, WhatsApp Cloud API). Each reports whether a failure is worth retrying (network, rate limit) or permanent (bad number, rejected). Phone numbers are validated and converted to international form; invalid ones are skipped with a reason.
+- **Delivery tracking.** Every send records the provider and the provider's message ID. A message only becomes `delivered` when the provider says so. WhatsApp and Termii webhooks update it, and a late "failed" can never undo a "delivered". Email stays `sent` because SMTP can only confirm that Gmail accepted it, not that it reached an inbox (bounces are not tracked).
+- **Webhooks are verified.** WhatsApp: Meta's signature (HMAC-SHA256) with your app secret. Termii: HMAC-SHA512 signature or a shared token. Anything unsigned or wrongly signed is rejected. Retries are stored once. A status that arrives before the send was logged is kept and applied later.
+- **Opt-out.** Replying STOP on WhatsApp switches WhatsApp off for that person immediately and sends a confirmation. Every email has an unsubscribe link (and the one-click header mail apps use). Opening the link only shows a confirmation button, so mail scanners cannot unsubscribe anyone.
+- **WhatsApp 24-hour rule.** Messages we start use your approved template. Plain text is sent only inside the 24 hours after the person last messaged us.
+- **Branded HTML emails** with a plain-text version.
+- **Safe test mode (ON by default).** While on, messages go only to recipients you list. See below.
+- All new endpoints live behind one function, `/api/comms/<name>`, which keeps the project well inside Vercel's function limit.
+
+## IMPORTANT: sending is now locked until you open it
+Test mode is ON in your database. Until you change it, nothing is sent to anyone, including the admin Follow-up tab (it will say "Test mode is ON"). Sending also now needs `SUPABASE_SERVICE_ROLE_KEY` in Vercel, because consent and test mode are read from the database.
+
+**Allow only yourself (recommended first step)** - Supabase > SQL Editor:
+```sql
+update communication_settings
+set value = '{"enabled": true, "recipients": ["2348012345678", "you@gmail.com"]}'
+where key = 'test_mode';
+```
+Use your own phone (any format) and email. Changes take effect within 30 seconds.
+
+**Go live for everyone** (only after your tests pass):
+```sql
+update communication_settings set value = '{"enabled": false, "recipients": []}' where key = 'test_mode';
+```
+
+## New Vercel settings
+See `.env.example` for every name. Phase 3 adds: `SITE_URL`, `UNSUBSCRIBE_SECRET`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`, and (optional) `TERMII_WEBHOOK_SECRET`, `TERMII_WEBHOOK_TOKEN`, `TERMII_BASE_URL`, `WHATSAPP_GRAPH_VERSION`. Redeploy after adding them.
+
+## Connect the webhooks
+**WhatsApp** (Meta developer dashboard > your app > WhatsApp > Configuration):
+1. Callback URL: `https://dcf-unn-site.vercel.app/api/comms/whatsapp-webhook`
+2. Verify token: the same text you put in `WHATSAPP_VERIFY_TOKEN`. Click Verify and save.
+3. Subscribe to the **messages** field (this carries both delivery statuses and replies).
+4. `WHATSAPP_APP_SECRET` is under App settings > Basic > App secret.
+
+**Termii** (Termii dashboard > webhook settings): URL `https://dcf-unn-site.vercel.app/api/comms/termii-webhook?token=YOUR_TOKEN`, with the same token in `TERMII_WEBHOOK_TOKEN`. Termii's report format is not confirmed against its own documentation yet, so after the first real report run the check below and tell me what it shows.
+
+**Check that webhooks arrive** (SQL Editor):
+```sql
+select provider, event_type, signature_valid, processed_at, error, payload
+from provider_webhooks order by received_at desc limit 10;
+```
+If nothing arrives, check Vercel > Logs for "webhook rejected" lines: they say whether the secret or the body encoding is the problem.
+
+## Test checklist (do these in order, test mode ON with only your own contacts)
+1. Admin > Follow-up: send yourself an SMS, a WhatsApp and an email. Open **Messages sent** and confirm each shows a provider and, after a minute, `delivered` for WhatsApp.
+2. Click Unsubscribe in the email, press the button, and confirm `member_preferences.email_opt_in` is now false.
+3. Reply STOP to the WhatsApp message and confirm you get the confirmation and a row appears in `contact_suppressions`.
+4. To undo your own opt-outs while testing (super admin, SQL Editor): `delete from contact_suppressions where address in ('2348012345678','you@gmail.com');` and set the member's `*_opt_in` back to true in `member_preferences`.
+
+## Limits you should know about
+- **SMS replies:** Nigerian alphabetic sender IDs cannot receive replies, so "reply STOP" does not work on SMS. SMS opt-outs are recorded by an admin for now.
+- **Email delivery:** "sent" means Gmail accepted it. Gmail also limits you to roughly 500 emails a day.
+- **WhatsApp templates:** each template needs Meta's approval, and Meta decides its price category.
+
 # PHASE 2: consent, queue and database foundation (AI Communication Centre)
 
 Nothing in this phase sends new messages. It prepares the database and makes consent safe.

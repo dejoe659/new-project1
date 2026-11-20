@@ -52,12 +52,17 @@ test("fails closed: without the service key a saved member cannot be messaged", 
   await send(api, member);
   assert.equal(calls.sent("sms") + calls.sent("whatsapp"), 0);
 });
-test("explicit consent from the join form works without a database lookup", async () => {
-  const { SUPABASE_SERVICE_ROLE_KEY, ...noKey } = PROVIDERS;
-  const api = load(noKey), calls = mockFetch({});
+test("explicit consent from the join form is honoured, but only when test mode can be confirmed off", async () => {
+  const api = load(PROVIDERS), calls = mockFetch({});
   const r = await send(api, { full_name: "Ada", phone: "08031234567", consent: { sms: true, whatsapp: false, email: false } });
   assert.deepEqual(r, { sms: "sent", whatsapp: "skipped" });
   assert.equal(calls.sent("sms"), 1);
+});
+test("fails closed: without the service key nothing is sent, even with explicit consent", async () => {
+  const { SUPABASE_SERVICE_ROLE_KEY, ...noKey } = PROVIDERS;
+  const api = load(noKey), calls = mockFetch({});
+  await send(api, { full_name: "Ada", phone: "08031234567", consent: { sms: true, whatsapp: true, email: true } });
+  assert.equal(calls.sent("sms") + calls.sent("whatsapp"), 0);
 });
 test("phone numbers are normalised to international form", async () => {
   const api = load(PROVIDERS), calls = mockFetch({ prefs: allOn });

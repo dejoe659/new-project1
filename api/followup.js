@@ -16,11 +16,12 @@ module.exports=async(req,res)=>{
   // Members must have agreed to communications. Visitors are reached by phone only (SMS / WhatsApp), and only when a leader sends it from this tab.
   const members=ids.length?await srv(`members?id=in.(${ids.join(",")})&consent_comms=eq.true&select=id,full_name,email,phone`):[];
   const visitors=vids.length?(await srv(`attendance?id=in.(${vids.join(",")})&visitor_name=not.is.null&select=id,visitor_name,visitor_phone`)).filter(v=>v.visitor_phone).map(v=>({attendance_id:v.id,full_name:v.visitor_name,phone:v.visitor_phone,email:null})):[];
+  let testHit=false;
   const tot=Object.fromEntries(channels.map(c=>[c,{sent:0,failed:0,skipped:0}]));
   const jobs=[...members.map(m=>({m,kind:"manual"})),...visitors.map(m=>({m,kind:"manual_visitor"}))];
-  for(let i=0;i<jobs.length;i+=5)await Promise.all(jobs.slice(i,i+5).map(async({m,kind})=>{const r=await sendAll({member:m,channels,subject:"A message from Dunamis Campus Fellowship",message,kind});for(const c of channels)tot[c][r[c]||"failed"]++}));
+  for(let i=0;i<jobs.length;i+=5)await Promise.all(jobs.slice(i,i+5).map(async({m,kind})=>{const r=await sendAll({member:m,channels,subject:"A message from Dunamis Campus Fellowship",message,kind});for(const c of channels){tot[c][r[c]||"failed"]++;if(/test mode/.test(r.reasons[c]||""))testHit=true}}));
   const name={email:"Email",sms:"SMS",whatsapp:"WhatsApp"};
   const parts=channels.map(c=>`${name[c]}: ${tot[c].sent} sent`+(tot[c].failed?`, ${tot[c].failed} failed`:"")+(tot[c].skipped?`, ${tot[c].skipped} skipped`:""));
   const noConsent=ids.length-members.length,noPhone=vids.length-visitors.length;
-  res.status(200).json({summary:parts.join(" · ")+(noConsent?` · ${noConsent} member(s) not messaged (no consent to communications).`:"")+(noPhone?` · ${noPhone} visitor(s) not messaged (no phone number).`:"")+(channels.some(c=>tot[c].failed)?" Check the message_log table for the reason.":"")});
+  res.status(200).json({summary:parts.join(" · ")+(noConsent?` · ${noConsent} member(s) not messaged (no consent to communications).`:"")+(noPhone?` · ${noPhone} visitor(s) not messaged (no phone number).`:"")+(channels.some(c=>tot[c].failed)?" Check the message_log table for the reason.":"")+(testHit?" Test mode is ON, so only authorised test recipients receive messages.":"")});
  }catch(e){console.error(e);res.status(500).json({error:"Server error. Check the Vercel function logs."})}};

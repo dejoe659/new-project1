@@ -1,7 +1,7 @@
 // Test helpers: mocked providers and a database stand-in. Nothing here can send a real message.
 const path = require("path");
 const KEYS = ["SUPABASE_SERVICE_ROLE_KEY","TERMII_API_KEY","TERMII_SENDER_ID","WHATSAPP_TOKEN","WHATSAPP_PHONE_ID","WHATSAPP_TEMPLATE",
-  "GMAIL_USER","GMAIL_APP_PASSWORD","AUTO_WELCOME","CRON_SECRET","AUTO_FOLLOWUP","AUTO_VISITOR_THANKS"];
+  "GMAIL_USER","GMAIL_APP_PASSWORD","AUTO_WELCOME","CRON_SECRET","AUTO_FOLLOWUP","AUTO_VISITOR_THANKS","TERMII_BASE_URL","TERMII_CHANNEL","TERMII_WEBHOOK_SECRET","TERMII_WEBHOOK_TOKEN","WHATSAPP_VERIFY_TOKEN","WHATSAPP_APP_SECRET","WHATSAPP_LANG","UNSUBSCRIBE_SECRET","SITE_URL"];
 function load(env = {}) {
   for (const k of KEYS) delete process.env[k];
   Object.assign(process.env, env);
@@ -18,6 +18,7 @@ function mockFetch(state = {}) {
     if (state.dbDown && url.includes("/rest/v1/")) return ok({}, 500);
     if (url.includes("/auth/v1/user")) return ok({ id: "u" });
     if (url.includes("/rest/v1/admins")) return ok([{ role: "super_admin" }]);
+    if (url.includes("communication_settings?")) return ok(state.noTestRow ? [] : [{ value: { enabled: !!state.testMode, recipients: state.testRecipients || [] } }]);
     if (url.includes("member_preferences?")) return ok(state.prefs ? [state.prefs] : []);
     if (url.includes("contact_suppressions?")) {
       const ch = /channel=in\.\(([a-z]+),all\)/.exec(url)[1], s = state.suppressed || [];
@@ -33,5 +34,5 @@ function mockFetch(state = {}) {
   calls.sent = (what) => calls.filter(c => what === "sms" ? c.url.includes("termii") : what === "whatsapp" ? c.url.includes("graph.facebook") : false).length;
   return calls;
 }
-const res = () => { const r = { code: 0, body: null, status(c) { r.code = c; return r; }, json(b) { r.body = b; return r; } }; return r; };
+const res = () => { const r = { code: 0, body: null, headers: {}, headersSent: false, status(c) { r.code = c; return r; }, json(b) { r.body = b; r.headersSent = true; return r; }, send(b) { r.body = b; r.headersSent = true; return r; }, setHeader(k, v) { r.headers[k] = v; }, end() { r.headersSent = true; return r; } }; return r; };
 module.exports = { load, mockFetch, res, PROVIDERS };
