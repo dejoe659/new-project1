@@ -158,7 +158,7 @@ module.exports = async (req, res) => {
   if (!Object.prototype.hasOwnProperty.call(actions, name)) return res.status(400).json({ error: "Unknown action." });
   if (WRITE_ACTIONS.includes(name) && !WRITERS.includes(me.role)) return res.status(403).json({ error: "Your role can view messages but not change them." });
   if ((name === "approve" || name === "reject") && me.role !== "super_admin") return res.status(403).json({ error: "Only a super admin can approve or reject messages." });
-  if (!hasSrv()) return res.status(503).json({ error: "Server setup is incomplete: SUPABASE_SERVICE_ROLE_KEY is missing in Vercel." });
+  if (!hasSrv()) return res.status(503).json({ error: "Server setup is incomplete: the Supabase secret key (SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY) is missing in Vercel." });
   try {
     res.status(200).json(await actions[name](b, me));
   } catch (e) {

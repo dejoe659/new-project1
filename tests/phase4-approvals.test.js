@@ -221,3 +221,19 @@ test("fails closed when the server key is missing", async () => {
   assert.equal(r.code, 503);
   assert.equal(s.db.t.campaigns.length, 0);
 });
+
+// ---------- server key naming
+test("the newer SUPABASE_SECRET_KEY name works, and sb_secret_ keys are sent as apikey only", async () => {
+  const { SUPABASE_SERVICE_ROLE_KEY, ...rest } = PROVIDERS;
+  const api = load({ ...rest, SUPABASE_SECRET_KEY: "sb_secret_abc" });
+  const seen = [];
+  global.fetch = async (url, opt = {}) => { seen.push(opt.headers); return { ok: true, status: 200, json: async () => [] }; };
+  const { srv, hasSrv } = api("_comms/db.js");
+  assert.equal(hasSrv(), true);
+  await srv("campaigns?select=id");
+  assert.equal(seen[0].apikey, "sb_secret_abc");
+  assert.equal(seen[0].Authorization, undefined);
+  const jwt = load({ ...rest, SUPABASE_SECRET_KEY: "eyJhbGciOi.jwt.like" })("_comms/db.js");
+  await jwt.srv("campaigns?select=id");
+  assert.equal(seen[1].Authorization, "Bearer eyJhbGciOi.jwt.like");
+});
