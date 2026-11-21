@@ -1,3 +1,28 @@
+# PHASE 5: sending approved messages
+
+## How it works
+- On the **Approvals** tab, an *Approved* message now has a **Send now** button (super admin only). Pressing it asks you to confirm, then sends in small batches while the page shows progress. **Continue sending** appears if it was interrupted.
+- Sending first builds one queue row per person and channel. Only **approved members** in the chosen audience are included, and only if they agreed to that channel, are not opted out, have a valid phone or email, and are not on the opt-out list. Everyone left out is counted with the reason (see **History** on the message).
+- Consent, the opt-out list and test mode are checked again at the moment of sending, so someone who opts out after queuing gets nothing.
+- **Temporary failures** (network, busy provider) are retried after 5 minutes, 30 minutes, then 2 hours, up to 3 attempts. **Permanent failures** (bad number, rejected) are not retried and are marked failed.
+- **A message is never sent twice.** Each row has a unique key, is claimed before sending, and a message that was mid-send when the server stopped is marked failed instead of being resent (it may already have gone out).
+- A message ends as **Sent** if at least one person received it, or **Failed** if nobody did.
+- **Scheduled messages** (approved with a future time) are sent by a daily job at about 07:00 UTC (08:00 Lagos). Vercel's free plan only allows daily jobs, so a message scheduled for 3 pm goes out the next morning.
+
+## Needed in Vercel
+`CRON_SECRET` (any long random text) for the daily job, and `UNSUBSCRIBE_SECRET` so emails carry a working unsubscribe link. Without `UNSUBSCRIBE_SECRET`, emails go out without that link.
+
+## Before the first real send
+Test mode must list your own phone and email, otherwise nothing is delivered. Send a message to yourself first, check it, then turn test mode off:
+`update communication_settings set value = '{"enabled": false, "recipients": []}' where key = 'test_mode';`
+
+## Known limits
+- "Delivered" is tracked on the Messages sent tab (from provider reports), not on the queue row.
+- A message to thousands of people is sent about 20 at a time from the page, so keep the page open until it finishes. Closing it is safe: press Continue sending later.
+
+## Tests
+`npm test` runs 92 tests, 19 of them for this phase.
+
 # PHASE 4: approvals (nothing is sent yet)
 
 ## What changed

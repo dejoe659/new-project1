@@ -65,8 +65,8 @@ const dispatch = async (ch, member, address, text, subject) => {
 
 // member: {id?, attendance_id?, full_name, email, phone, consent?}
 // Returns {email:"sent|failed|skipped", sms:..., whatsapp:...}. Never throws. out.reasons holds the why.
-const sendAll = async ({ member, channels, subject, message, kind }) => {
-  const text = fill(message, member), out = {}, reasons = {};
+const sendAll = async ({ member, channels, subject, message, kind, queueId, attempt }) => {
+  const text = fill(message, member), out = {}, reasons = {}, retry = {};
   let c; try { c = await consentFor(member); } catch (e) { console.error("consent lookup failed:", e.message); c = { deny: "consent check failed" }; }
   const tm = await testMode();
   await Promise.all(channels.map(async (ch) => {
@@ -79,18 +79,19 @@ const sendAll = async ({ member, channels, subject, message, kind }) => {
       if (!why && !allowedInTest(tm, ch, a.address)) why = "test mode: recipient not authorised";
       if (why) { st = "skipped"; detail = why; }
       else { res = await dispatch(ch, member, a.address, text, subject); if (res.skipped) { st = "skipped"; detail = res.skipped; } }
-    } catch (e) { st = "failed"; detail = String(e.message).slice(0, 300); console.error(ch, "failed:", detail); }
+    } catch (e) { st = "failed"; detail = String(e.message).slice(0, 300); retry[ch] = e && e.retryable === true; console.error(ch, "failed:", detail); }
     out[ch] = st; reasons[ch] = detail;
     if (st !== "skipped" && hasSrv()) {
       try {
         await srv("message_log", { method: "POST", body: JSON.stringify({
           member_id: member.id || null, attendance_id: member.attendance_id || null, recipient_name: member.full_name || null,
           recipient: ch === "email" ? member.email : member.phone, channel: ch, kind, category: kind, status: st, detail,
-          provider: res && res.provider || null, provider_message_id: res && res.id || null, sent_at: st === "sent" ? new Date().toISOString() : null }) });
+          provider: res && res.provider || null, provider_message_id: res && res.id || null, queue_id: queueId || null, retry_count: attempt ? Math.max(0, attempt - 1) : 0, sent_at: st === "sent" ? new Date().toISOString() : null }) });
       } catch (e) { console.error("log failed", e.message); }
     }
   }));
   Object.defineProperty(out, "reasons", { value: reasons, enumerable: false });
+  Object.defineProperty(out, "retryable", { value: retry, enumerable: false });
   return out;
 };
 module.exports = { srv, sendAll, SB: SB() };

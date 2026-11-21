@@ -4,8 +4,10 @@
 //   list, get                 any administrator (moderators are read-only)
 //   save, submit, cancel      super_admin, content_admin
 //   approve, reject           super_admin only
+//   send, run, progress       super_admin only (Phase 5: send an approved message, in small batches)
 const { srv, hasSrv } = require("./db");
 const { adminAuth } = require("./admin-auth");
+const queue = require("./queue");
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CHANNELS = ["email", "sms", "whatsapp"];
@@ -13,6 +15,7 @@ const LIMITS = { title: 120, description: 1000, venue: 120, url: 300, subject: 1
 const EDITABLE = ["draft", "pending_approval", "rejected"];
 const WRITERS = ["super_admin", "content_admin"];
 const WRITE_ACTIONS = ["save", "submit", "cancel"];
+const APPROVER_ONLY = ["approve", "reject", "send", "run"];
 
 class Bad extends Error { constructor(msg, code = 400) { super(msg); this.code = code; } }
 const text = (v, max) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -99,7 +102,8 @@ const actions = {
   async get(b) {
     const campaign = await load(b.id);
     const approvals = await srv(`message_approvals?campaign_id=eq.${campaign.id}&select=*&order=created_at.asc`);
-    return { campaign, approvals };
+    const started = ["processing", "sent", "failed"].includes(campaign.status);
+    return { campaign, approvals, progress: started ? await queue.progress(campaign.id) : null };
   },
   async save(b, me) {
     const d = cleanInput(b);
@@ -147,6 +151,26 @@ const actions = {
     await record(me, campaign, "cancelled", { note: text(b.note, LIMITS.note) || null });
     return { campaign };
   },
+  // Phase 5. Sending is a deliberate second step after approval, taken by a super admin.
+  async send(b, me) {
+    const row = await load(b.id);
+    if (row.status !== "approved") throw new Bad(row.status === "scheduled" ? "This message is scheduled and will go out at its send time." : "Only an approved message can be sent.", 409);
+    mustBeComplete({ ...row, scheduled_for: null });
+    const started = await queue.expandCampaign(row);
+    if (!started.started) throw new Bad("This message has already been started.", 409);
+    try { await srv("admin_audit_logs", { method: "POST", body: JSON.stringify({ admin_user_id: me.id, admin_email: me.email, admin_role: me.role, action: "campaign.send", entity: "campaign", entity_id: row.id, details: { title: row.title, queued: started.queued, skipped: started.skipped } }) }); }
+    catch (e) { console.error("send not audited for campaign", row.id, e.message); }
+    await queue.runBatch({ campaignId: row.id, workerId: "admin:" + me.id.slice(0, 8) });
+    return { started, progress: await queue.progress(row.id), campaign: await load(row.id) };
+  },
+  async run(b, me) {
+    const row = await load(b.id);
+    if (row.status === "processing") await queue.runBatch({ campaignId: row.id, workerId: "admin:" + me.id.slice(0, 8) });
+    return { progress: await queue.progress(row.id), campaign: await load(row.id) };
+  },
+  async progress(b) {
+    return { progress: await queue.progress((await load(b.id)).id) };
+  },
 };
 
 module.exports = async (req, res) => {
@@ -157,7 +181,7 @@ module.exports = async (req, res) => {
   const name = String(b.action || "");
   if (!Object.prototype.hasOwnProperty.call(actions, name)) return res.status(400).json({ error: "Unknown action." });
   if (WRITE_ACTIONS.includes(name) && !WRITERS.includes(me.role)) return res.status(403).json({ error: "Your role can view messages but not change them." });
-  if ((name === "approve" || name === "reject") && me.role !== "super_admin") return res.status(403).json({ error: "Only a super admin can approve or reject messages." });
+  if (APPROVER_ONLY.includes(name) && me.role !== "super_admin") return res.status(403).json({ error: "Only a super admin can approve, reject or send messages." });
   if (!hasSrv()) return res.status(503).json({ error: "Server setup is incomplete: the Supabase secret key (SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY) is missing in Vercel." });
   try {
     res.status(200).json(await actions[name](b, me));

@@ -5,6 +5,7 @@ const routes = {
   "termii-webhook": require("../_comms/termii-webhook"),
   unsubscribe: require("../_comms/unsubscribe"),
   campaigns: require("../_comms/campaigns"),
+  "queue-run": require("../_comms/queue-run"),
 };
 module.exports = async (req, res) => {
   const h = routes[String((req.query && req.query.action) || "")];

@@ -1,6 +1,6 @@
 // A small in-memory stand-in for Supabase's REST API, plus mocked SMS / WhatsApp providers.
 // It understands exactly the filters the code uses, so webhook ordering and duplicate handling are tested for real.
-const UNIQUE = { provider_webhooks: ["provider", "dedupe_key"], contact_suppressions: ["channel", "address"], message_log: [] };
+const UNIQUE = { provider_webhooks: ["provider", "dedupe_key"], contact_suppressions: ["channel", "address"], message_log: [], message_queue: ["idempotency_key"] };
 function create(seed = {}) {
   const t = { provider_webhooks: [], message_log: [], contact_suppressions: [], member_preferences: [], members: [], communication_settings: [], ...seed };
   const calls = []; let n = 0;
@@ -13,6 +13,7 @@ function create(seed = {}) {
       case "is": return val === "null" ? v == null : v != null;
       case "in": return val.replace(/^\(|\)$/g, "").split(",").includes(String(v));
       case "lt": return v != null && String(v) < val;
+      case "lte": return v != null && String(v) <= val;
       case "gte": return v != null && String(v) >= val;
       default: return true;
     }
@@ -22,6 +23,11 @@ function create(seed = {}) {
     const u = new URL(url), table = u.pathname.split("/rest/v1/")[1], prefer = (opt.headers && opt.headers.Prefer) || "", method = opt.method || "GET";
     const rows = (t[table] = t[table] || []), body = opt.body ? JSON.parse(opt.body) : null, res = (j, s = 200) => ({ ok: s < 300, status: s, json: async () => j });
     if (method === "GET") { let r = filter(rows, u.searchParams); const l = u.searchParams.get("limit"); if (l) r = r.slice(0, +l); return res(r.map((x) => ({ ...x }))); }   // copies, like a real database
+    if (method === "POST" && Array.isArray(body)) {
+      const keys = UNIQUE[table] || [];
+      for (const b of body) { if (keys.length && rows.some((r) => keys.every((k) => r[k] === b[k]))) continue; rows.push({ id: require("crypto").randomUUID(), created_at: new Date().toISOString(), updated_at: new Date().toISOString(), attempts: 0, max_attempts: 3, ...b }); }
+      return res(null, 201);
+    }
     if (method === "POST") {
       const keys = UNIQUE[table] || [];
       if (keys.length && rows.some((r) => keys.every((k) => r[k] === body[k]))) { if (prefer.includes("ignore-duplicates")) return res(prefer.includes("representation") ? [] : null, prefer.includes("representation") ? 200 : 201); return res({ message: "duplicate" }, 409); }
