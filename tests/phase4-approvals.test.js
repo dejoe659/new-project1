@@ -237,3 +237,12 @@ test("the newer SUPABASE_SECRET_KEY name works, and sb_secret_ keys are sent as 
   await jwt.srv("campaigns?select=id");
   assert.equal(seen[1].Authorization, "Bearer eyJhbGciOi.jwt.like");
 });
+
+test("a send time in the past is refused when saving, with a way out", async () => {
+  const s = setup();
+  const r = await s.call(good({ scheduled_for: new Date(Date.now() - 36e5).toISOString() }));
+  assert.equal(r.code, 400);
+  assert.match(r.body.error, /already passed/);
+  assert.match(r.body.error, /clear the box/);
+  assert.equal(s.db.t.campaigns.length, 0);
+});

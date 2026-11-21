@@ -40,6 +40,7 @@ function cleanInput(b) {
   if (b.scheduled_for) {
     const d = new Date(b.scheduled_for);
     if (Number.isNaN(d.getTime())) throw new Bad("The scheduled time is not a valid date.");
+    if (d.getTime() <= Date.now() - 60000) throw new Bad("The \"Send on\" time has already passed. Pick a later time, or clear the box to send as soon as the message is approved.");
     scheduled_for = d.toISOString();
   }
   let event_at = null;
@@ -64,7 +65,7 @@ function problems(row) {
   if (ch.includes("sms") && !c.sms) out.push("the SMS text");
   if (ch.includes("whatsapp") && !c.whatsapp) out.push("the WhatsApp text");
   if (!(a.all_members === true || (a.levels || []).length || (a.departments || []).length)) out.push("an audience (everyone, or a level or department)");
-  if (row.scheduled_for && new Date(row.scheduled_for).getTime() <= Date.now() - 60000) out.push("a send time in the future");
+  if (row.scheduled_for && new Date(row.scheduled_for).getTime() <= Date.now() - 60000) out.push("a send time in the future (edit the message and clear the \"Send on\" box to send as soon as it is approved)");
   return out;
 }
 const mustBeComplete = (row) => { const p = problems(row); if (p.length) throw new Bad("Before this can go forward it needs " + p.join(", ") + "."); };
