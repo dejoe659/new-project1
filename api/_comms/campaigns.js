@@ -36,12 +36,11 @@ function cleanInput(b) {
   const a = b.audience && typeof b.audience === "object" ? b.audience : {};
   const list = (v, n, max) => [...new Set((Array.isArray(v) ? v : []).map((x) => text(x, max)).filter(Boolean))].slice(0, n);
   const audience = { all_members: a.all_members === true, levels: list(a.levels, 10, 10), departments: list(a.departments, 20, 60) };
-  let scheduled_for = null;
+  let scheduled_for = null, notice = null;
   if (b.scheduled_for) {
     const d = new Date(b.scheduled_for);
     if (Number.isNaN(d.getTime())) throw new Bad("The scheduled time is not a valid date.");
-    if (d.getTime() <= Date.now() - 60000) throw new Bad("The \"Send on\" time has already passed. Pick a later time, or clear the box to send as soon as the message is approved.");
-    scheduled_for = d.toISOString();
+    if (d.getTime() <= Date.now() - 60000) { notice = "The send time had already passed, so this message will go out as soon as it is approved."; scheduled_for = null; } else scheduled_for = d.toISOString();
   }
   let event_at = null;
   if (b.event_at) {
@@ -52,7 +51,7 @@ function cleanInput(b) {
   const url = text(b.registration_url, LIMITS.url);
   if (url && !/^https:\/\/[^\s]+$/i.test(url)) throw new Bad("The registration link must start with https://");
   return { title, description: text(b.description, LIMITS.description) || null, venue: text(b.venue, LIMITS.venue) || null,
-    registration_url: url || null, event_at, channels, content, audience, scheduled_for };
+    registration_url: url || null, event_at, channels, content, audience, scheduled_for, notice };
 }
 
 // A campaign may only move forward when it is complete. Checked again at submit and approve, not just at save.
@@ -65,7 +64,6 @@ function problems(row) {
   if (ch.includes("sms") && !c.sms) out.push("the SMS text");
   if (ch.includes("whatsapp") && !c.whatsapp) out.push("the WhatsApp text");
   if (!(a.all_members === true || (a.levels || []).length || (a.departments || []).length)) out.push("an audience (everyone, or a level or department)");
-  if (row.scheduled_for && new Date(row.scheduled_for).getTime() <= Date.now() - 60000) out.push("a send time in the future (edit the message and clear the \"Send on\" box to send as soon as it is approved)");
   return out;
 }
 const mustBeComplete = (row) => { const p = problems(row); if (p.length) throw new Bad("Before this can go forward it needs " + p.join(", ") + "."); };
@@ -107,18 +105,18 @@ const actions = {
     return { campaign, approvals, progress: started ? await queue.progress(campaign.id) : null };
   },
   async save(b, me) {
-    const d = cleanInput(b);
+    const { notice, ...d } = cleanInput(b);
     if (!b.id) {
       const rows = await srv("campaigns", { method: "POST", body: JSON.stringify({ ...d, status: "draft", created_by: me.id }), ...rep });
       await record(me, rows[0], "edited", { note: "Draft created", body_after: JSON.stringify(d.content) });
-      return { campaign: rows[0] };
+      return { campaign: rows[0], notice };
     }
     const before = await load(b.id);
     if (!EDITABLE.includes(before.status)) throw new Bad("This message is already " + before.status.replace("_", " ") + " and can no longer be edited.", 409);
     // Any edit sends a message back to draft, so an approval always covers exactly the wording that was approved.
     const campaign = await move(before, EDITABLE, { ...d, status: "draft", approved_by: null, approved_at: null }, b.updated_at || before.updated_at);
     await record(me, campaign, "edited", { body_before: JSON.stringify(before.content), body_after: JSON.stringify(d.content) });
-    return { campaign };
+    return { campaign, notice };
   },
   async submit(b, me) {
     const row = await load(b.id);

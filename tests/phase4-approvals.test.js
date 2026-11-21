@@ -174,13 +174,15 @@ test("incomplete messages cannot be submitted or approved", async () => {
   assert.ok(s.db.t.campaigns.every((c) => c.status === "draft"));
 });
 
-test("a draft whose send time has already passed cannot be approved", async () => {
+test("a send time that has passed no longer blocks approval: it goes out as soon as approved", async () => {
   const s = setup();
   const id = (await s.call(good({ scheduled_for: future() }))).body.campaign.id;
   await s.call({ action: "submit", id });
   s.db.t.campaigns[0].scheduled_for = new Date(Date.now() - 36e5).toISOString();
   s.db.t.campaigns[0].updated_at = "2026-02-02T00:00:00.000Z";
-  assert.match((await s.call({ action: "approve", id, updated_at: "2026-02-02T00:00:00.000Z" })).body.error, /future/);
+  const r = await s.call({ action: "approve", id, updated_at: "2026-02-02T00:00:00.000Z" });
+  assert.equal(r.code, 200);
+  assert.equal(r.body.campaign.status, "approved");
 });
 
 test("input is cleaned: unknown channels dropped, text capped, https links only", async () => {
@@ -238,11 +240,15 @@ test("the newer SUPABASE_SECRET_KEY name works, and sb_secret_ keys are sent as 
   assert.equal(seen[1].Authorization, "Bearer eyJhbGciOi.jwt.like");
 });
 
-test("a send time in the past is refused when saving, with a way out", async () => {
+test("a send time in the past is treated as 'send as soon as approved', with a notice", async () => {
   const s = setup();
   const r = await s.call(good({ scheduled_for: new Date(Date.now() - 36e5).toISOString() }));
-  assert.equal(r.code, 400);
-  assert.match(r.body.error, /already passed/);
-  assert.match(r.body.error, /clear the box/);
-  assert.equal(s.db.t.campaigns.length, 0);
+  assert.equal(r.code, 200);
+  assert.equal(r.body.campaign.scheduled_for, null);
+  assert.match(r.body.notice, /already passed/);
+  assert.equal(r.body.campaign.notice, undefined, "the notice is never written to the database");
+  const id = r.body.campaign.id;
+  assert.equal((await s.call({ action: "submit", id })).code, 200);
+  const ok = await s.call({ action: "approve", id, updated_at: s.db.t.campaigns[0].updated_at });
+  assert.equal(ok.body.campaign.status, "approved");
 });
