@@ -73,16 +73,16 @@ test("phone numbers are normalised to international form", async () => {
 test("registration: ticked channels are stored and consent is derived from them", async () => {
   const api = load({}), calls = mockFetch({}), r = res();
   await api("register.js")({ method: "POST", body: { full_name: "Ada Eze", email: "ada@x.com", phone: "08031234567", department: "CRE", date_of_birth: "2005-01-01",
-    state_of_origin: "Enugu", local_government: "Nsukka", hostel_address: "Block C, Room 4", pref_whatsapp: true, pref_sms: true, pref_email: true, photo_url: "https://evil.example/x.jpg" } }, r);
+    state_of_origin: "Enugu", local_government: "Nsukka", hostel_address: "Block C, Room 4", pref_whatsapp: true, pref_sms: true, pref_email: true, photo_url: "https://takdaiqvaxancqrqwwhy.supabase.co/storage/v1/object/public/member-photos/a.jpg" } }, r);
   const row = calls.find(c => c.url.includes("/rest/v1/members")).body;
   assert.equal(r.code, 200);
   assert.deepEqual([row.reg_pref_whatsapp, row.reg_pref_sms, row.reg_pref_email, row.consent_comms], [true, true, true, true]);
   assert.equal(row.hostel_address, "Block C, Room 4");
-  assert.equal(row.photo_url, null);
+  assert.match(row.photo_url, /member-photos\/a\.jpg$/);
   assert.equal(row.profile_approved, false);
 });
 test("registration: all three contact channels are compulsory", async () => {
-  const body = { full_name: "Ada", email: "a@x.com", phone: "08031234567", department: "Choir", date_of_birth: "2005-01-01", state_of_origin: "E", local_government: "N" };
+  const body = { full_name: "Ada", email: "a@x.com", phone: "08031234567", department: "Choir", date_of_birth: "2005-01-01", state_of_origin: "E", local_government: "N", photo_url: "https://takdaiqvaxancqrqwwhy.supabase.co/storage/v1/object/public/member-photos/a.jpg" };
   for (const missing of [{}, { pref_whatsapp: true, pref_sms: true }, { pref_whatsapp: true, pref_email: true }, { pref_sms: true, pref_email: true }, { consent_comms: true }]) {
     const api = load({}), calls = mockFetch({}), r = res();
     await api("register.js")({ method: "POST", body: { ...body, ...missing } }, r);
@@ -90,14 +90,23 @@ test("registration: all three contact channels are compulsory", async () => {
     assert.equal(calls.filter(c => c.url.includes("/rest/v1/members")).length, 0, "nothing is stored");
   }
 });
+test("registration: a photo is compulsory and must be one uploaded to our own bucket", async () => {
+  const body = { full_name: "Ada", email: "a@x.com", phone: "08031234567", department: "Choir", date_of_birth: "2005-01-01", state_of_origin: "E", local_government: "N", pref_whatsapp: true, pref_sms: true, pref_email: true };
+  for (const photo of [{}, { photo_url: "" }, { photo_url: "https://evil.example/x.jpg" }]) {
+    const api = load({}), calls = mockFetch({}), r = res();
+    await api("register.js")({ method: "POST", body: { ...body, ...photo } }, r);
+    assert.equal(r.code, 400, JSON.stringify(photo));
+    assert.equal(calls.filter(c => c.url.includes("/rest/v1/members")).length, 0);
+  }
+});
 test("welcome message is OFF by default", async () => {
   const api = load(PROVIDERS), calls = mockFetch({}), r = res();
-  await api("register.js")({ method: "POST", body: { full_name: "Ada", email: "a@x.com", phone: "08031234567", department: "CRE", date_of_birth: "2005-01-01", state_of_origin: "E", local_government: "N", pref_sms: true, pref_whatsapp: true, pref_email: true } }, r);
+  await api("register.js")({ method: "POST", body: { full_name: "Ada", email: "a@x.com", phone: "08031234567", department: "CRE", date_of_birth: "2005-01-01", state_of_origin: "E", local_government: "N", pref_sms: true, pref_whatsapp: true, pref_email: true, photo_url: "https://takdaiqvaxancqrqwwhy.supabase.co/storage/v1/object/public/member-photos/a.jpg" } }, r);
   assert.equal(calls.sent("sms") + calls.sent("whatsapp"), 0);
 });
 test("welcome message (switched on) goes to every channel", async () => {
   const api = load({ ...PROVIDERS, AUTO_WELCOME: "on" }), calls = mockFetch({}), r = res();
-  await api("register.js")({ method: "POST", body: { full_name: "Ada Eze", email: "a@x.com", phone: "08031234567", department: "CRE", date_of_birth: "2005-01-01", state_of_origin: "E", local_government: "N", pref_sms: true, pref_whatsapp: true, pref_email: true } }, r);
+  await api("register.js")({ method: "POST", body: { full_name: "Ada Eze", email: "a@x.com", phone: "08031234567", department: "CRE", date_of_birth: "2005-01-01", state_of_origin: "E", local_government: "N", pref_sms: true, pref_whatsapp: true, pref_email: true, photo_url: "https://takdaiqvaxancqrqwwhy.supabase.co/storage/v1/object/public/member-photos/a.jpg" } }, r);
   assert.equal(calls.sent("sms"), 1); assert.equal(calls.sent("whatsapp"), 1);
   assert.match(calls.find(c => c.url.includes("termii")).body.sms, /^Hello Ada,/);
 });
