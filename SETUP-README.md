@@ -207,6 +207,5 @@ When a visitor checks in, the page asks the server to send them one thank-you by
 
 ## Phase 7: Member portal (/portal)
 - Members sign in with a one-time email link (no password). The link proves they own the email they registered with, and the portal then shows only THEIR record (found by that confirmed email). Nobody can open another member's record.
-- Members can see their department, approval status and attendance history, and update phone, address, faculty, course, level, skills, bio, interests, photo and public-profile choice. Name, department, approval and who may message them stay leader-controlled.
-- Changing bio, skills or photo hides the public profile until a leader approves it again (Admin > Show in directory).
+- Members can only VIEW their department, approval status, details and attendance history. They cannot change anything after registering: all changes go through a leader in the admin page. (Checked in the database too: a signed-in non-admin cannot read or write members, admins, campaigns, attendance or message tables.)
 - **Supabase dashboard setup (one time):** Authentication > URL Configuration: set Site URL to `https://dcf-unn-site.vercel.app` and add `https://dcf-unn-site.vercel.app/portal` to Redirect URLs. Authentication > Emails > SMTP Settings: turn on custom SMTP with the fellowship Gmail (smtp.gmail.com, port 465, the same app password), otherwise Supabase only sends a handful of sign-in emails per hour.

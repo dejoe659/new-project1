@@ -53,51 +53,19 @@ test("a member sees only their own record and attendance", async () => {
   assert.deepEqual(r.body.attendance.recent, [{ kind: "Celebration Service", date: "2026-11-15" }]);
 });
 
-test("the browser cannot choose which record to change", async () => {
+test("members cannot change anything: every save-style request is refused and nothing is written", async () => {
   const s = setup();
-  await s.call("tok1", { action: "save", id: mem(2).id, member_id: mem(2).id, email: "m2@x.com", course: "Hacked" });
-  assert.equal(s.db.t.members.find((m) => m.id === mem(2).id).course, "History");
-  assert.equal(s.db.t.members.find((m) => m.id === mem(1).id).course, "Hacked", "only the signed-in member's own record changes");
-});
-
-test("leader-controlled fields cannot be changed by a member", async () => {
-  const s = setup({ members: [mem(1, { review_status: "pending", profile_approved: false })] });
-  const r = await s.call("tok1", { action: "save", phone: "08039999999", review_status: "approved", profile_approved: true, department: "Media", full_name: "Boss", email: "x@x.com", consent_comms: true });
-  assert.equal(r.code, 200);
-  const m = s.db.t.members[0];
-  assert.equal(m.phone, "08039999999");
-  assert.deepEqual([m.review_status, m.profile_approved, m.department, m.full_name, m.email], ["pending", false, "Choir", "Member 1", "m1@x.com"]);
-});
-
-test("changing bio, skills or photo hides the public profile until a leader approves again", async () => {
-  const s = setup();
-  const r = await s.call("tok1", { action: "save", bio: "new bio" });
-  assert.equal(r.body.reapproval, true);
-  assert.equal(s.db.t.members[0].profile_approved, false);
-  assert.match(r.body.message, /approves your changes/);
-});
-
-test("changing private details does not hide the public profile", async () => {
-  const s = setup();
-  await s.call("tok1", { action: "save", phone: "08031112222", hostel_address: "Block C" });
-  assert.equal(s.db.t.members[0].profile_approved, true);
-});
-
-test("turning the public profile off hides it at once", async () => {
-  const s = setup();
-  const r = await s.call("tok1", { action: "save", consent_public: false });
-  assert.equal(s.db.t.members[0].profile_approved, false);
-  assert.equal(r.body.reapproval, false);
-});
-
-test("bad input is refused: phone, level, foreign photo link, empty save", async () => {
-  const s = setup();
-  assert.equal((await s.call("tok1", { action: "save", phone: "123" })).code, 400);
-  assert.equal((await s.call("tok1", { action: "save", level: "999" })).code, 400);
-  assert.equal((await s.call("tok1", { action: "save", photo_url: "https://evil.example/x.jpg" })).code, 400);
-  assert.equal((await s.call("tok1", { action: "save" })).code, 400);
-  assert.equal((await s.call("tok1", { action: "delete" })).code, 400);
-  assert.equal(s.db.t.members[0].phone, "08031234567");
+  const before = JSON.stringify(s.db.t.members);
+  for (const body of [
+    { action: "save", bio: "new bio", phone: "08039999999" },
+    { action: "update", course: "Hacked" },
+    { action: "delete" },
+    { action: "me", id: mem(2).id, email: "m2@x.com", course: "Hacked", review_status: "approved" },
+  ]) await s.call("tok1", body);
+  assert.equal(JSON.stringify(s.db.t.members), before, "no member record was changed");
+  assert.equal((await s.call("tok1", { action: "save", bio: "x" })).code, 400);
+  const writes = s.db.calls.filter((c) => c.url.includes("/rest/v1/members") && c.method !== "GET");
+  assert.equal(writes.length, 0, "the portal never writes to the members table");
 });
 
 test("a rejected registration is not reachable through the portal", async () => {

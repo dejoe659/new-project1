@@ -1,16 +1,11 @@
-// Member portal API. A member signs in with Supabase Auth (email + password); this endpoint then shows and updates THEIR OWN record.
-//   POST /api/comms/portal   { action: "me" | "save", ...fields }
-// The member is found by the signed-in, email-confirmed address. The browser never says which record to read or change.
-// Members can change contact and profile details only. Name, department, approval status and consent to be messaged are leader-controlled.
+// Member portal API (READ ONLY). A member signs in with an emailed one-time link; this endpoint then shows THEIR OWN record.
+//   POST /api/comms/portal   { action: "me" }
+// The member is found by the signed-in, email-confirmed address. The browser never says which record to read.
+// Members cannot change anything after registration: every change goes through a leader in the admin page.
 const { SB, srv, hasSrv } = require("./db");
 const { K: ANON } = require("../_lib");
-const { normalize } = require("./phone");
 
-const PHOTO = () => SB() + "/storage/v1/object/public/member-photos/";
-const PUBLIC_FIELDS = ["bio", "skills_business", "photo_url"];            // shown on the website, so a change needs a leader's re-approval
 const MEMBER_COLUMNS = "id,full_name,email,phone,department,faculty,course,level,status,intro,interests,bio,skills_business,hostel_address,photo_url,review_status,profile_approved,consent_public,date_of_birth,created_at";
-const text = (v, max) => (typeof v === "string" ? v.trim().slice(0, max) : undefined);
-const rep = { headers: { Prefer: "return=representation" }, json: true };
 
 class Bad extends Error { constructor(msg, code = 400) { super(msg); this.code = code; } }
 
@@ -46,31 +41,6 @@ const actions = {
   async me(b, email) {
     const m = await mine(email);
     return { member: view(m), attendance: await history(m.id) };
-  },
-  async save(b, email) {
-    const m = await mine(email);
-    const patch = {};
-    const set = (k, v) => { if (v !== undefined) patch[k] = v; };
-    if (b.phone !== undefined) { const p = normalize(String(b.phone)); if (!p.ok) throw new Bad("Enter a valid phone number."); patch.phone = text(String(b.phone), 30); }
-    set("hostel_address", text(b.hostel_address, 300));
-    set("bio", text(b.bio, 600));
-    set("skills_business", text(b.skills_business, 300));
-    set("interests", text(b.interests, 300));
-    set("intro", text(b.intro, 600));
-    set("faculty", text(b.faculty, 100));
-    set("course", text(b.course, 120));
-    if (b.level !== undefined) { const l = text(String(b.level), 3); if (!/^[1-7]00$/.test(l)) throw new Bad("Choose your level."); patch.level = l; }
-    if (b.photo_url !== undefined) { if (typeof b.photo_url !== "string" || !b.photo_url.startsWith(PHOTO())) throw new Bad("Please upload your photo again."); patch.photo_url = b.photo_url; }
-    if (b.consent_public !== undefined) patch.consent_public = b.consent_public === true;
-    if (!Object.keys(patch).length) throw new Bad("Nothing to save.");
-    // Public details changed, or public profile switched off: hide the profile until a leader approves it again.
-    const publicChanged = PUBLIC_FIELDS.some((k) => k in patch && patch[k] !== m[k]);
-    const optedOut = patch.consent_public === false;
-    let reapproval = false;
-    if (m.profile_approved && (publicChanged || optedOut)) { patch.profile_approved = false; reapproval = publicChanged && !optedOut && (patch.consent_public ?? m.consent_public) === true; }
-    const rows = await srv(`members?id=eq.${m.id}`, { method: "PATCH", body: JSON.stringify(patch), ...rep });
-    if (!rows.length) throw new Bad("Could not save. Try again.", 409);
-    return { member: view({ ...m, ...patch }), reapproval, message: reapproval ? "Saved. Your public profile will show again after a leader approves your changes." : "Saved." };
   },
 };
 
