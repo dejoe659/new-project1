@@ -204,8 +204,3 @@ When a visitor checks in, the page asks the server to send them one thank-you by
 - When a visitor checks in with an email, they get a personal welcome right away. The daily job re-checks the last 3 days as a safety net. One welcome per email address, ever, and every email has an unsubscribe link.
 - Switch: `automation_rules` row `visitor_followup` (mode `automatic` + channel `email`). Run `supabase/migration-6-visitor-email.sql` (already applied to your project).
 - How to see it working: Admin > Messages sent, category `visitor_followup`.
-
-## Phase 7: Member portal (/portal)
-- Members sign in with a one-time email link (no password). The link proves they own the email they registered with, and the portal then shows only THEIR record (found by that confirmed email). Nobody can open another member's record.
-- Members can only VIEW their department, approval status, details and attendance history. They cannot change anything after registering: all changes go through a leader in the admin page. (Checked in the database too: a signed-in non-admin cannot read or write members, admins, campaigns, attendance or message tables.)
-- **Supabase dashboard setup (one time):** Authentication > URL Configuration: set Site URL to `https://dcf-unn-site.vercel.app` and add `https://dcf-unn-site.vercel.app/portal` to Redirect URLs. Authentication > Emails > SMTP Settings: turn on custom SMTP with the fellowship Gmail (smtp.gmail.com, port 465, the same app password), otherwise Supabase only sends a handful of sign-in emails per hour.
