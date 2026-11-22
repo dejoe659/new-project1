@@ -28,7 +28,7 @@ const consentFor = async (m) => {
     if (p.opted_out) return { deny: "member opted out" };
     return { map: { whatsapp: p.whatsapp_opt_in, sms: p.sms_opt_in, email: p.email_opt_in } };
   }
-  if (m.attendance_id) return { map: { sms: true, whatsapp: true, email: false } };
+  if (m.attendance_id) return { map: { sms: true, whatsapp: true, email: m.email_ok === true } };
   return { deny: "no consent record" };
 };
 const addrFor = (ch, m) => {
@@ -54,7 +54,7 @@ const dispatch = async (ch, member, address, text, subject) => {
   }
   if (ch === "email") {
     if (!gmail.configured()) return { skipped: "email not configured" };
-    const t = member.id ? token.sign({ m: member.id, c: "email" }) : null;
+    const t = member.id ? token.sign({ m: member.id, c: "email" }) : member.attendance_id ? token.sign({ a: member.attendance_id, c: "email" }) : null;
     const unsubscribeUrl = t ? `${siteUrl()}/api/comms/unsubscribe?t=${t}` : null;
     const subj = subject || "A message from DCF UNN", body = render({ subject: subj, text, unsubscribeUrl });
     const headers = unsubscribeUrl ? { "List-Unsubscribe": `<${unsubscribeUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } : undefined;

@@ -198,3 +198,9 @@ When a visitor checks in, the page asks the server to send them one thank-you by
 - **Absence follow-up.** Every day at 08:00 Nigeria time the daily job looks at each service from the last 3 days (not today's). Every approved member who was not marked present, and who had already joined, gets their OWN message, addressed by first name and naming the service and date. One message per person per service, ever (a unique key blocks repeats). It uses the same consent, opt-out and test-mode checks as every other message. Switch it on/off with the `absent_followup` row in `automation_rules` (mode `automatic` = on, `disabled` = off; `channels` picks email/sms/whatsapp).
 - The old weekly `/api/followup-cron` job was removed from `vercel.json` because this replaces it.
 - **Email delivery.** Messages carry Reply-To, a plain-text version, and one-click unsubscribe headers. Email is capped at 400 a day (`EMAIL_DAILY_LIMIT`) and sent 5 at a time, because Gmail penalises bursts. Without your own domain, Gmail can still put some mail in spam: ask members to mark it "Not spam" or add the address to contacts. A custom domain with Resend is the real fix.
+
+### Visitor welcome email (Phase 6b)
+- The check-in page now has an optional **Email** box and a **"Send me a welcome email"** tick for new visitors. No tick, no email.
+- When a visitor checks in with an email, they get a personal welcome right away. The daily job re-checks the last 3 days as a safety net. One welcome per email address, ever, and every email has an unsubscribe link.
+- Switch: `automation_rules` row `visitor_followup` (mode `automatic` + channel `email`). Run `supabase/migration-6-visitor-email.sql` (already applied to your project).
+- How to see it working: Admin > Messages sent, category `visitor_welcome`.
