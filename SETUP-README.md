@@ -200,7 +200,7 @@ When a visitor checks in, the page asks the server to send them one thank-you by
 - **Email delivery.** Messages carry Reply-To, a plain-text version, and one-click unsubscribe headers. Email is capped at 400 a day (`EMAIL_DAILY_LIMIT`) and sent 5 at a time, because Gmail penalises bursts. Without your own domain, Gmail can still put some mail in spam: ask members to mark it "Not spam" or add the address to contacts. A custom domain with Resend is the real fix.
 
 ### Visitor welcome email (Phase 6b)
-- The check-in page now has an optional **Email** box and a **"Send me a welcome email"** tick for new visitors. No tick, no email.
+- The check-in page asks every new visitor for an email (compulsory); the notice under the form is their consent (migration-7).
 - When a visitor checks in with an email, they get a personal welcome right away. The daily job re-checks the last 3 days as a safety net. One welcome per email address, ever, and every email has an unsubscribe link.
 - Switch: `automation_rules` row `visitor_followup` (mode `automatic` + channel `email`). Run `supabase/migration-6-visitor-email.sql` (already applied to your project).
 - How to see it working: Admin > Messages sent, category `visitor_welcome`.
