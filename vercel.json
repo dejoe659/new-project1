@@ -2,10 +2,6 @@
  "cleanUrls": true,
  "crons": [
   {
-   "path": "/api/followup-cron",
-   "schedule": "0 8 * * 0"
-  },
-  {
    "path": "/api/comms/queue-run",
    "schedule": "0 7 * * *"
   }

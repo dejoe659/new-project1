@@ -15,6 +15,8 @@ const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const PROVIDER = { email: "gmail", sms: "termii", whatsapp: "whatsapp_cloud" };
 const BACKOFF_MIN = [5, 30, 120, 480];                     // wait before retry 1, 2, 3, ...
 const STALE_MS = 10 * 60 * 1000;
+const CONCURRENCY = 5;
+const emailDailyLimit = () => Math.max(1, Number(process.env.EMAIL_DAILY_LIMIT) || 400);   // Gmail's own limit is about 500 a day
 const enc = encodeURIComponent;
 const lower = (v) => String(v || "").trim().toLowerCase();
 const rep = { headers: { Prefer: "return=representation" }, json: true };
@@ -27,35 +29,46 @@ function inAudience(a, m) {
   return (levels.length && levels.includes(lower(m.level))) || (deps.length && deps.includes(lower(m.department)));
 }
 
+// Can this member be messaged on this channel? Returns { address } or { why }. Used for campaigns and for automatic follow-ups.
+//   p = the member's saved preferences (or undefined), blocked = Set of "channel|address" opt-outs.
+function reach(m, ch, p, blocked) {
+  if (!p) return { why: "no consent record" };
+  if (p.opted_out) return { why: "member opted out" };
+  if (!p[ch + "_opt_in"]) return { why: "no consent for " + ch };
+  let address;
+  if (ch === "email") { address = lower(m.email); if (!EMAIL_RE.test(address)) return { why: "invalid email address" }; }
+  else { const n = normalize(m.phone); if (!n.ok) return { why: "invalid phone number" }; address = n.digits; }
+  if (blocked.has(`${ch}|${address}`) || blocked.has(`all|${address}`)) return { why: "contact opted out" };
+  return { address };
+}
+const loadContext = async () => {
+  const [prefs, sup] = await Promise.all([
+    srv("member_preferences?select=member_id,whatsapp_opt_in,sms_opt_in,email_opt_in,opted_out&limit=5000"),
+    srv("contact_suppressions?select=channel,address&limit=20000"),
+  ]);
+  return { pref: Object.fromEntries(prefs.map((p) => [p.member_id, p])), blocked: new Set(sup.map((x) => `${x.channel}|${x.address}`)) };
+};
+
 // Claims the campaign (approved/scheduled -> processing) and creates its queue rows. Safe to call twice: the second call does nothing.
 async function expandCampaign(campaign) {
   const claimed = await srv(`campaigns?id=eq.${campaign.id}&status=in.(approved,scheduled)`, { method: "PATCH", body: JSON.stringify({ status: "processing" }), ...rep });
   if (!claimed.length) return { started: false, reason: "already started" };
   const c = claimed[0];
   try {
-    const [members, prefs, sup] = await Promise.all([
+    const [members, { pref, blocked }] = await Promise.all([
       srv("members?review_status=eq.approved&select=id,full_name,email,phone,level,department&limit=5000"),
-      srv("member_preferences?select=member_id,whatsapp_opt_in,sms_opt_in,email_opt_in,opted_out&limit=5000"),
-      srv("contact_suppressions?select=channel,address&limit=20000"),
+      loadContext(),
     ]);
-    const pref = Object.fromEntries(prefs.map((p) => [p.member_id, p]));
-    const blocked = new Set(sup.map((x) => `${x.channel}|${x.address}`));
     const rows = [], skipped = {};
     const skip = (why) => { skipped[why] = (skipped[why] || 0) + 1; };
     for (const m of members.filter((x) => inAudience(c.audience, x))) {
-      const p = pref[m.id];
       for (const ch of c.channels || []) {
         const wording = ch === "email" ? c.content.email_body : c.content[ch];
         if (!wording) { skip("no wording for " + ch); continue; }
-        if (!p) { skip("no consent record"); continue; }
-        if (p.opted_out) { skip("member opted out"); continue; }
-        if (!p[ch + "_opt_in"]) { skip("no consent for " + ch); continue; }
-        let address;
-        if (ch === "email") { address = lower(m.email); if (!EMAIL_RE.test(address)) { skip("invalid email address"); continue; } }
-        else { const n = normalize(m.phone); if (!n.ok) { skip("invalid phone number"); continue; } address = n.digits; }
-        if (blocked.has(`${ch}|${address}`) || blocked.has(`all|${address}`)) { skip("contact opted out"); continue; }
+        const r = reach(m, ch, pref[m.id], blocked);
+        if (r.why) { skip(r.why); continue; }
         rows.push({ idempotency_key: `campaign:${c.id}:${m.id}:${ch}`, category: "announcement", mode: "manual", channel: ch, provider: PROVIDER[ch],
-          member_id: m.id, campaign_id: c.id, recipient_name: m.full_name, recipient_address: address,
+          member_id: m.id, campaign_id: c.id, recipient_name: m.full_name, recipient_address: r.address,
           subject: ch === "email" ? c.content.email_subject : null, body: wording, status: "approved" });
       }
     }
@@ -73,7 +86,7 @@ async function expandCampaign(campaign) {
 // Sends one claimed row. Returns the new state of the row.
 async function sendRow(row) {
   const member = { id: row.member_id, full_name: row.recipient_name, email: row.channel === "email" ? row.recipient_address : null, phone: row.channel === "email" ? null : row.recipient_address };
-  const out = await sendAll({ member, channels: [row.channel], subject: row.subject, message: row.body, kind: "announcement", queueId: row.id, attempt: row.attempts });   // row.attempts already counts this send (it was incremented when the row was claimed)
+  const out = await sendAll({ member, channels: [row.channel], subject: row.subject, message: row.body, kind: row.category || "announcement", queueId: row.id, attempt: row.attempts });   // row.attempts already counts this send (it was incremented when the row was claimed)
   const st = out[row.channel], why = out.reasons[row.channel];
   const now = new Date();
   if (st === "sent") return { status: "sent", sent_at: now.toISOString(), last_error: null };
@@ -108,21 +121,31 @@ async function runBatch({ campaignId = null, limit = 20, budgetMs = 20000, worke
   const touched = new Set(await recoverStale());
   const fresh = await srv(`message_queue?status=eq.approved${scope}&order=created_at.asc&limit=${limit}`);
   const retries = await srv(`message_queue?status=eq.scheduled&next_attempt_at=lte.${now}${scope}&order=next_attempt_at.asc&limit=${limit}`);
-  let handled = 0;
-  for (const row of [...retries, ...fresh].slice(0, limit)) {
-    if (Date.now() - t0 > budgetMs) break;
+  // Gmail suspends accounts that send too much, and bulk bursts look like spam. Past the daily cap, email rows simply wait for the next run.
+  let emailsLeft = Infinity;
+  const due = [...retries, ...fresh].slice(0, limit);
+  if (due.some((r) => r.channel === "email")) {
+    const since = enc(new Date(Date.now() - 864e5).toISOString());
+    const used = (await srv(`message_log?channel=eq.email&status=in.(sent,delivered)&created_at=gte.${since}&select=id&limit=5000`)).length;
+    emailsLeft = Math.max(0, emailDailyLimit() - used);
+  }
+  let handled = 0, held = 0;
+  const one = async (row) => {
+    if (Date.now() - t0 > budgetMs) return;
+    if (row.channel === "email") { if (emailsLeft <= 0) { held++; return; } emailsLeft--; }
     const mine = await srv(`message_queue?id=eq.${row.id}&status=in.(approved,scheduled)&attempts=eq.${row.attempts}`, { method: "PATCH", ...rep,
       body: JSON.stringify({ status: "processing", locked_at: new Date().toISOString(), locked_by: workerId, attempts: row.attempts + 1 }) });
-    if (!mine.length) continue;                                                              // someone else has it
+    if (!mine.length) return;                                                               // someone else has it
     let result;
     try { result = await sendRow(mine[0]); }
     catch (e) { result = { status: "failed", dead_lettered_at: new Date().toISOString(), last_error: String(e.message).slice(0, 300) }; }
     await srv(`message_queue?id=eq.${row.id}&status=eq.processing`, { method: "PATCH", body: JSON.stringify({ ...result, locked_at: null, locked_by: null }) });
     if (row.campaign_id) touched.add(row.campaign_id);
     handled++;
-  }
+  };
+  for (let i = 0; i < due.length; i += CONCURRENCY) await Promise.all(due.slice(i, i + CONCURRENCY).map(one));
   for (const id of touched) await finish(id);
-  return { handled };
+  return { handled, heldForDailyLimit: held };
 }
 
 // Counts for the admin page.
@@ -140,4 +163,4 @@ async function progress(campaignId) {
 // Campaigns whose send time has arrived (used by the daily job).
 const dueCampaigns = () => srv(`campaigns?status=eq.scheduled&scheduled_for=lte.${enc(new Date().toISOString())}&select=*&limit=20`);
 
-module.exports = { expandCampaign, runBatch, progress, finish, recoverStale, dueCampaigns, inAudience };
+module.exports = { reach, loadContext, expandCampaign, runBatch, progress, finish, recoverStale, dueCampaigns, inAudience };

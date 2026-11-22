@@ -10,7 +10,7 @@ const _setTransport = (t) => { transport = t; };   // tests only
 async function send({ to, subject, text, html, headers }) {
   let info;
   try {
-    info = await getTransport().sendMail({ from: `"Dunamis Campus Fellowship UNN" <${E().GMAIL_USER}>`, to, subject, text, html, headers });
+    info = await getTransport().sendMail({ from: `"Dunamis Campus Fellowship UNN" <${E().GMAIL_USER}>`, to, subject, text, html, headers, replyTo: E().GMAIL_USER });
   } catch (e) {
     const code = e.responseCode || 0;
     // 4xx SMTP codes and network errors are temporary; 5xx (bad address, auth failure) are not.
