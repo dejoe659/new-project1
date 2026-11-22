@@ -6,6 +6,7 @@ const routes = {
   unsubscribe: require("../_comms/unsubscribe"),
   campaigns: require("../_comms/campaigns"),
   "queue-run": require("../_comms/queue-run"),
+  portal: require("../_comms/portal"),
 };
 module.exports = async (req, res) => {
   const h = routes[String((req.query && req.query.action) || "")];
