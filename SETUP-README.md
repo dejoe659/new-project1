@@ -203,4 +203,4 @@ When a visitor checks in, the page asks the server to send them one thank-you by
 - The check-in page asks every new visitor for an email (compulsory); the notice under the form is their consent (migration-7).
 - When a visitor checks in with an email, they get a personal welcome right away. The daily job re-checks the last 3 days as a safety net. One welcome per email address, ever, and every email has an unsubscribe link.
 - Switch: `automation_rules` row `visitor_followup` (mode `automatic` + channel `email`). Run `supabase/migration-6-visitor-email.sql` (already applied to your project).
-- How to see it working: Admin > Messages sent, category `visitor_welcome`.
+- How to see it working: Admin > Messages sent, category `visitor_followup`.

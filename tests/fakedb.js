@@ -1,5 +1,7 @@
 // A small in-memory stand-in for Supabase's REST API, plus mocked SMS / WhatsApp providers.
 // It understands exactly the filters the code uses, so webhook ordering and duplicate handling are tested for real.
+// Same rule as the real database: a queue row with any other category is rejected.
+const QUEUE_CATEGORIES = ['welcome','visitor_thanks','visitor_followup','meeting_reminder','meeting_cancelled','meeting_venue_changed','birthday','absent_followup','announcement','manual'];
 const UNIQUE = { provider_webhooks: ["provider", "dedupe_key"], contact_suppressions: ["channel", "address"], message_log: [], message_queue: ["idempotency_key"] };
 function create(seed = {}) {
   const t = { provider_webhooks: [], message_log: [], contact_suppressions: [], member_preferences: [], members: [], communication_settings: [], ...seed };
@@ -23,6 +25,7 @@ function create(seed = {}) {
     const u = new URL(url), table = u.pathname.split("/rest/v1/")[1], prefer = (opt.headers && opt.headers.Prefer) || "", method = opt.method || "GET";
     const rows = (t[table] = t[table] || []), body = opt.body ? JSON.parse(opt.body) : null, res = (j, s = 200) => ({ ok: s < 300, status: s, json: async () => j });
     if (method === "GET") { let r = filter(rows, u.searchParams); const l = u.searchParams.get("limit"); if (l) r = r.slice(0, +l); return res(r.map((x) => ({ ...x }))); }   // copies, like a real database
+    if (method === "POST" && table === "message_queue" && (Array.isArray(body) ? body : [body]).some((b) => !QUEUE_CATEGORIES.includes(b.category))) return res({ message: "violates check constraint message_queue_category_check" }, 400);
     if (method === "POST" && Array.isArray(body)) {
       const keys = UNIQUE[table] || [];
       for (const b of body) { if (keys.length && rows.some((r) => keys.every((k) => r[k] === b[k]))) continue; rows.push({ id: require("crypto").randomUUID(), created_at: new Date().toISOString(), updated_at: new Date().toISOString(), attempts: 0, max_attempts: 3, ...b }); }

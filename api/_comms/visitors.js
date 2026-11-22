@@ -23,7 +23,7 @@ async function welcome({ attendanceId = null } = {}) {
   if (!visits.length) return { enabled: true, queued: 0 };
   const [{ blocked }, welcomed, sessions] = await Promise.all([
     queue.loadContext(),
-    srv("message_queue?category=eq.visitor_welcome&select=recipient_address&limit=20000"),
+    srv("message_queue?category=eq.visitor_followup&select=recipient_address&limit=20000"),
     srv("sessions?select=id,kind,session_date&limit=500"),
   ]);
   const seen = new Set(welcomed.map((r) => String(r.recipient_address).toLowerCase())), sess = Object.fromEntries(sessions.map((s) => [s.id, s]));
@@ -33,7 +33,7 @@ async function welcome({ attendanceId = null } = {}) {
     if (!EMAIL_RE.test(to) || seen.has(to) || blocked.has(`email|${to}`) || blocked.has(`all|${to}`)) continue;
     seen.add(to);
     const w = wording(v.visitor_name, sess[v.session_id]);
-    rows.push({ idempotency_key: `visitor:${v.id}:email`, category: "visitor_welcome", mode: "automatic", channel: "email", provider: "gmail", attendance_id: v.id,
+    rows.push({ idempotency_key: `visitor:${v.id}:email`, category: "visitor_followup", mode: "automatic", channel: "email", provider: "gmail", attendance_id: v.id,
       recipient_name: v.visitor_name, recipient_address: to, subject: w.subject, body: w.text, status: "approved" });
   }
   if (rows.length) await srv("message_queue?on_conflict=idempotency_key", { method: "POST", body: JSON.stringify(rows), headers: { Prefer: "resolution=ignore-duplicates,return=minimal" } });
