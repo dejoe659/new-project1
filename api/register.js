@@ -5,7 +5,7 @@ const PHOTO=(process.env.SUPABASE_URL||"https://takdaiqvaxancqrqwwhy.supabase.co
 const WELCOME=process.env.WELCOME_MESSAGE||"Hello {name}, welcome to Dunamis Campus Fellowship, UNN! We meet Tuesday 5:30 PM (Celebration Service), Thursday 5:00 PM (Bible Study), Friday 5:00 PM (Friday Prayer, Lawn Tennis) and Saturday 3:00 PM (Evangelism, Lawn Tennis). God bless you.";
 // Consent is per channel and only what the person actually ticked counts. Nothing is assumed.
 const pref=b=>({whatsapp:b.pref_whatsapp===true,sms:b.pref_sms===true,email:b.pref_email===true});
-module.exports=handler({table:"members",fields:["full_name","email","phone","department","faculty","course","level","status","intro","interests","bio","date_of_birth","state_of_origin","local_government","skills_business","photo_url","hostel_address"],
+module.exports=handler({table:"members",consent:["pref_whatsapp","pref_sms","pref_email"],fields:["full_name","email","phone","department","faculty","course","level","status","intro","interests","bio","date_of_birth","state_of_origin","local_government","skills_business","photo_url","hostel_address"],
  required:["full_name","email","phone","department","date_of_birth","state_of_origin","local_government"],
  row:(d,b)=>{const p=pref(b);return{...d,photo_url:d.photo_url&&String(d.photo_url).startsWith(PHOTO)?d.photo_url:null,date_of_birth:d.date_of_birth||null,
   reg_pref_whatsapp:p.whatsapp,reg_pref_sms:p.sms,reg_pref_email:p.email,consent_comms:p.whatsapp||p.sms||p.email,
