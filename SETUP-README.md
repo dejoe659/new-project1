@@ -219,3 +219,9 @@ When a visitor checks in, the page asks the server to send them one thank-you by
 - **Audit:** opening, updating or deleting a request, and any change to the care team, is written to the audit log (never the content).
 - **Safety:** at most 5 requests per hour from one address; spam trap field; the team gets an email saying a request arrived (never its content).
 - **First step for you:** Admin > Care > add yourself (and your counsellors) to the care team. Run `supabase/migration-9-care.sql` (already applied).
+
+## Phase 10: Sermons and resources
+- **Public page `/sermons`:** search, filter by type and topic, featured items. Types: sermons, audio messages, video teachings, Bible study, discipleship, devotionals. Audio plays on the page, YouTube links are embedded, PDFs open in a new tab, devotional text can be read in place.
+- **Admin > Sermons:** add or edit a resource, upload an audio file (MP3, M4A, WAV, OGG) or a PDF up to 50 MB, or paste a YouTube or other https link, or type written content. Feature, hide/publish, delete (deleting also removes the uploaded file). Only super and content administrators can change resources.
+- **Video tip:** upload long videos to YouTube and paste the link here; the free storage limit is 50 MB per file.
+- The public can read published items only (checked in the database). Run `supabase/migration-10-resources.sql` (already applied).
