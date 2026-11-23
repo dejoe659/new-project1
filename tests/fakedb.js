@@ -2,13 +2,14 @@
 // It understands exactly the filters the code uses, so webhook ordering and duplicate handling are tested for real.
 // Same rule as the real database: a queue row with any other category is rejected.
 const QUEUE_CATEGORIES = ['welcome','visitor_thanks','visitor_followup','meeting_reminder','meeting_cancelled','meeting_venue_changed','birthday','absent_followup','announcement','manual'];
-const UNIQUE = { provider_webhooks: ["provider", "dedupe_key"], contact_suppressions: ["channel", "address"], message_log: [], message_queue: ["idempotency_key"] };
+const UNIQUE = { provider_webhooks: ["provider", "dedupe_key"], contact_suppressions: ["channel", "address"], message_log: [], message_queue: ["idempotency_key"], event_registrations: ["event_id", "phone_key"] };
 function create(seed = {}) {
   const t = { provider_webhooks: [], message_log: [], contact_suppressions: [], member_preferences: [], members: [], communication_settings: [], ...seed };
   const calls = []; let n = 0;
   const getPath = (row, key) => key.includes("->>") ? key.split("->>").reduce((a, k, i) => i ? (a == null ? a : a[k]) : row[k], null) : row[key];
   const test = (row, key, cond) => {
     const [op, ...rest] = cond.split("."), val = rest.join("."), v = getPath(row, key);
+    if (op === "not") return !test(row, key, val);
     switch (op) {
       case "eq": return String(v) === val;
       case "neq": return String(v) !== val;
@@ -39,6 +40,7 @@ function create(seed = {}) {
       return prefer.includes("representation") ? res([row], 201) : res(null, 201);
     }
     if (method === "PATCH") { const hit = filter(rows, u.searchParams); hit.forEach((r) => Object.assign(r, body, { updated_at: new Date(Date.now() + ++n).toISOString() })); return prefer.includes("representation") ? res(hit) : res(null, 204); }
+    if (method === "DELETE") { const hit = filter(rows, u.searchParams); hit.forEach((r) => rows.splice(rows.indexOf(r), 1)); return res(null, 204); }
     return res({}, 405);
   };
   const providers = { sms: [], whatsapp: [] };

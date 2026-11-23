@@ -5,6 +5,7 @@ const { hasSrv } = require("./db");
 const queue = require("./queue");
 const absence = require("./absence");
 const visitors = require("./visitors");
+const eventReminders = require("./event-reminders");
 const same = (a, b) => { const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length === y.length && crypto.timingSafeEqual(x, y); };
 
 module.exports = async (req, res) => {
@@ -17,6 +18,8 @@ module.exports = async (req, res) => {
   try { followUp = await absence.run(); } catch (e) { console.error("absence follow-up failed:", e); followUp = { error: true }; }   // never blocks the rest of the job
   let welcomed;
   try { welcomed = await visitors.welcome(); } catch (e) { console.error("visitor welcome failed:", e); welcomed = { error: true }; }
+  let reminded;
+  try { reminded = await eventReminders.run(); } catch (e) { console.error("event reminders failed:", e); reminded = { error: true }; }
   const r = await queue.runBatch({ limit: 25, workerId: "cron" });
-  res.status(200).json({ started, followUp, welcomed, ...r });
+  res.status(200).json({ started, followUp, welcomed, reminded, ...r });
 };

@@ -33,9 +33,7 @@ async function render(){V.innerHTML="Loading...";if(tab==="attendance")return re
  if(tab==="testimonies"){const{data,error}=await sb.from("testimonies").select("*").order("created_at",{ascending:false});if(error)return V.textContent=error.message;
   V.innerHTML=(data.length?"":"<p>No testimonies yet.</p>")+data.map(t=>`<div class="row"><h3>${esc(t.title)} <span class="tag">${t.status}</span></h3>`+dl({By:t.name||"Anonymous",Category:t.category,Email:t.email,Testimony:t.content,Submitted:new Date(t.created_at).toLocaleString()})+
    btn("testimonies",t.id,"approve","Approve and publish","ok")+btn("testimonies",t.id,"reject","Reject")+btn("testimonies",t.id,"del","Delete","no")+"</div>").join("")}
- if(tab==="events"){const{data,error}=await sb.from("events").select("*").order("date");if(error)return V.textContent=error.message;
-  V.innerHTML=`<form id="ef" class="form"><h2>Add event or announcement</h2><label>Title<input name="title" required></label><label>Date and time (for example: Sat 7 Nov, 4 PM)<input name="date"></label><label>Venue<input name="venue"></label><label>Details<textarea name="details" rows="3"></textarea></label><button class="btn">Add</button></form>`+data.map(e=>`<div class="row"><h3>${esc(e.title)}</h3>`+dl({When:e.date,Venue:e.venue,Details:e.details})+btn("events",e.id,"del","Delete","no")+"</div>").join("");
-  $("#ef").onsubmit=async ev=>{ev.preventDefault();const{error}=await sb.from("events").insert(Object.fromEntries(new FormData(ev.target)));error?alert(error.message):render()}}
+ if(tab==="events")return renderEvents();
  if(tab==="gallery"){const{data,error}=await sb.from("gallery").select("*").order("date",{ascending:false});if(error)return V.textContent=error.message;
   V.innerHTML=`<form id="gf" class="form"><h2>Upload photo</h2><label>Photo (JPG, PNG or WebP, max 5 MB)<input type="file" name="file" accept="image/jpeg,image/png,image/webp" required></label><label>Event title<input name="event" required></label><label>Category<select name="category"><option>Celebration Service</option><option>Bible Study</option><option>Prayer Meetings</option><option>Evangelism</option><option>Conferences</option><option>Outreaches</option><option>Fellowship Gatherings</option></select></label><label>Date<input type="date" name="date"></label><label>Caption<input name="caption"></label><button class="btn">Upload</button><p class="msg" id="gm"></p></form>`+data.map(g=>`<div class="row"><img src="${esc(g.url)}" alt=""><h3>${esc(g.event)}</h3>`+dl({Category:g.category,Date:g.date,Caption:g.caption})+btn("gallery",g.id,"del","Delete","no")+"</div>").join("");
   $("#gf").onsubmit=async ev=>{ev.preventDefault();const f=new FormData(ev.target),file=f.get("file");if(file.size>5242880)return $("#gm").textContent="File is over 5 MB.";$("#gm").textContent="Uploading...";
@@ -156,7 +154,51 @@ async function renderRep(sel){const[s,m,a]=await Promise.all([sb.from("sessions"
  $("#rs2").onchange=e=>renderRep(e.target.value);
  $("#csv").onclick=()=>{const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"',L=[["Status","Name","Department","Level","Phone"]];c.here.forEach(x=>L.push(["Present",x.full_name,x.department,x.level,x.phone]));c.gone.forEach(x=>L.push(["Absent",x.full_name,x.department,x.level,x.phone]));
   const b=new Blob([L.map(r=>r.map(q).join(",")).join("\n")],{type:"text/csv"}),u=document.createElement("a");u.href=URL.createObjectURL(b);u.download="attendance-"+cur.session_date+".csv";u.click()}}
-V.onclick=async e=>{const b=e.target.closest("button[data-act]");if(!b)return;const{t,id,act}=b.dataset;let q;
+// ---- Events and programmes: create, edit, poster, capacity, registrations, attendance, CSV
+let editEv=null;
+const lagos=iso=>new Date(iso).toLocaleString("en-GB",{weekday:"short",day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit",timeZone:"Africa/Lagos"});
+const localInput=iso=>{if(!iso)return"";const d=new Date(iso),p=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"T"+p(d.getHours())+":"+p(d.getMinutes())};
+async function renderEvents(){
+ const{data,error}=await sb.from("events").select("*").order("starts_at",{ascending:false,nullsFirst:false});if(error)return V.textContent=error.message;
+ const{data:regs}=await sb.from("event_registrations").select("event_id");const n={};(regs||[]).forEach(r=>n[r.event_id]=(n[r.event_id]||0)+1);
+ const e=editEv&&data.find(x=>x.id===editEv)||{};const now=Date.now();
+ V.innerHTML=`<form id="ef" class="form"><h2>${e.id?"Edit event":"Add event or programme"}</h2>
+ <label>Title<input name="title" required maxlength="150" value="${esc(e.title||"")}"></label>
+ <label>Date and time<input name="starts_at" type="datetime-local" required value="${localInput(e.starts_at)}"></label>
+ <label>Venue<input name="venue" maxlength="150" value="${esc(e.venue||"")}"></label>
+ <label>Details<textarea name="details" rows="3" maxlength="1500">${esc(e.details||"")}</textarea></label>
+ <label>Registration limit (leave empty for no limit)<input name="capacity" type="number" min="1" max="100000" value="${e.capacity||""}"></label>
+ <label>Poster (optional, JPG, PNG or WebP, up to 5 MB)<input name="poster" type="file" accept="image/jpeg,image/png,image/webp"></label>${e.poster_url?`<p><small>Current poster is kept unless you choose a new one.</small></p>`:""}
+ <label class="ck"><input type="checkbox" name="registration_open" ${e.id&&e.registration_open===false?"":"checked"}> Registration is open</label>
+ <button class="btn">${e.id?"Save changes":"Add event"}</button>${e.id?'<button type="button" class="btn" id="ecancel">Cancel</button>':""}<p class="msg" id="em2" role="status"></p></form>`+
+ (data.length?"":"<p>No events yet.</p>")+data.map(x=>{const past=x.starts_at&&new Date(x.starts_at).getTime()<now;
+  return `<div class="row"><h3>${esc(x.title)} <span class="tag">${past?"past":"upcoming"}</span> ${x.registration_open===false?'<span class="tag">registration closed</span>':""}</h3>`+
+  dl({When:x.starts_at?lagos(x.starts_at):x.date,Venue:x.venue,Details:x.details,Registered:(n[x.id]||0)+(x.capacity?" of "+x.capacity:"")})+(x.poster_url?`<img src="${esc(x.poster_url)}" alt="Poster" style="max-width:160px">`:"")+
+  `<div><button data-ev="edit" data-id="${x.id}">Edit</button><button data-ev="regs" data-id="${x.id}">Registrations (${n[x.id]||0})</button><button data-ev="toggle" data-id="${x.id}">${x.registration_open===false?"Open registration":"Close registration"}</button>`+btn("events",x.id,"del","Delete","no")+`</div></div>`}).join("");
+ const m=$("#em2");const say=(t,ok)=>{m.textContent=t;m.className="msg "+(ok?"ok":"err")};
+ if($("#ecancel"))$("#ecancel").onclick=()=>{editEv=null;renderEvents()};
+ $("#ef").onsubmit=async ev=>{ev.preventDefault();const f=ev.target,b=f.querySelector("button.btn");b.disabled=true;say("");
+  try{const fd=new FormData(f),t=String(fd.get("title")).trim(),st=new Date(fd.get("starts_at"));if(!t)throw new Error("Give the event a title.");if(isNaN(st))throw new Error("Choose the date and time.");
+   const cap=fd.get("capacity")?parseInt(fd.get("capacity"),10):null;if(cap!==null&&!(cap>0))throw new Error("The limit must be a positive number.");
+   const row={title:t,starts_at:st.toISOString(),date:lagos(st.toISOString()),venue:String(fd.get("venue")).trim()||null,details:String(fd.get("details")).trim()||null,capacity:cap,registration_open:f.registration_open.checked};
+   const file=f.poster.files[0];if(file){if(file.size>5242880)throw new Error("That poster is over 5 MB.");const ext={"image/jpeg":"jpg","image/png":"png","image/webp":"webp"}[file.type];if(!ext)throw new Error("Posters must be JPG, PNG or WebP.");
+    const path="event-posters/"+crypto.randomUUID()+"."+ext,up=await sb.storage.from("gallery").upload(path,file,{contentType:file.type});if(up.error)throw new Error("Poster upload failed: "+up.error.message);
+    row.poster_url=sb.storage.from("gallery").getPublicUrl(path).data.publicUrl}
+   const r=editEv?await sb.from("events").update(row).eq("id",editEv):await sb.from("events").insert(row);if(r.error)throw new Error(r.error.message);
+   editEv=null;renderEvents()}catch(x){say(x.message);b.disabled=false}};
+}
+async function renderRegs(id){
+ const{data:e}=await sb.from("events").select("*").eq("id",id).single();const{data,error}=await sb.from("event_registrations").select("*").eq("event_id",id).order("created_at");if(error)return V.textContent=error.message;
+ V.innerHTML=`<p><button id="eback">Back to events</button></p><h2>${esc(e.title)}: registrations (${data.length}${e.capacity?" of "+e.capacity:""})</h2><p>${data.filter(r=>r.attended).length} marked present.</p><button id="ecsv">Download CSV</button>
+ <div class="scroll"><table class="rep"><tr><th>Name</th><th>Phone</th><th>Email</th><th>Registered</th><th>Present</th></tr>${data.map(r=>`<tr><td>${esc(r.full_name)}</td><td>${esc(r.phone)}</td><td>${esc(r.email||"")}</td><td>${esc(lagos(r.created_at))}</td><td><input type="checkbox" data-reg="${r.id}" ${r.attended?"checked":""} aria-label="Present: ${esc(r.full_name)}"></td></tr>`).join("")}</table></div>`;
+ $("#eback").onclick=renderEvents;
+ V.querySelectorAll("input[data-reg]").forEach(c=>c.onchange=async()=>{const{error}=await sb.from("event_registrations").update({attended:c.checked}).eq("id",c.dataset.reg);if(error){alert(error.message);c.checked=!c.checked}});
+ $("#ecsv").onclick=()=>{const q=v=>{v=String(v??"");if(/^[=+\-@]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'};const L=[["Name","Phone","Email","Registered","Present"]];data.forEach(r=>L.push([r.full_name,r.phone,r.email,lagos(r.created_at),r.attended?"Yes":"No"]));
+  const b=new Blob([L.map(r=>r.map(q).join(",")).join("\n")],{type:"text/csv"}),u=document.createElement("a");u.href=URL.createObjectURL(b);u.download="event-registrations.csv";u.click()}}
+async function eventClick(ev){const id=ev.dataset.id,a=ev.dataset.ev;
+ if(a==="edit"){editEv=id;return renderEvents()}if(a==="regs")return renderRegs(id);
+ if(a==="toggle"){const{data:x}=await sb.from("events").select("registration_open").eq("id",id).single();const{error}=await sb.from("events").update({registration_open:x.registration_open===false}).eq("id",id);return error?alert(error.message):renderEvents()}}
+V.onclick=async e=>{const evb=e.target.closest("button[data-ev]");if(evb)return eventClick(evb);const b=e.target.closest("button[data-act]");if(!b)return;const{t,id,act}=b.dataset;let q;
  if(act==="del"){if(!confirm("Delete this permanently?"))return;if(t==="members"){const{data}=await sb.from("members").select("photo_url").eq("id",id).single();const p=data&&data.photo_url&&data.photo_url.split("/member-photos/")[1];if(p)await sb.storage.from("member-photos").remove([p])}if(t==="gallery"){const{data}=await sb.from("gallery").select("url").eq("id",id).single();const p=data&&data.url.split("/gallery/")[1];if(p)await sb.storage.from("gallery").remove([p])}q=sb.from(t).delete().eq("id",id)}
  else if(t==="members"){const m=cache[id],u={approve:{review_status:"approved",profile_approved:!!m.consent_public},reject:{review_status:"rejected",profile_approved:false},hide:{profile_approved:false},show:{profile_approved:true}}[act];q=sb.from(t).update(u).eq("id",id)}
  else q=sb.from(t).update({status:act==="approve"?"approved":"rejected"}).eq("id",id);

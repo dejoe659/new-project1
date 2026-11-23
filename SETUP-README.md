@@ -204,3 +204,10 @@ When a visitor checks in, the page asks the server to send them one thank-you by
 - When a visitor checks in with an email, they get a personal welcome right away. The daily job re-checks the last 3 days as a safety net. One welcome per email address, ever, and every email has an unsubscribe link.
 - Switch: `automation_rules` row `visitor_followup` (mode `automatic` + channel `email`). Run `supabase/migration-6-visitor-email.sql` (already applied to your project).
 - How to see it working: Admin > Messages sent, category `visitor_followup`.
+
+## Phase 8: Events and programmes
+- **Public page `/events`:** upcoming programmes with poster, date, venue, spots left and a Register form; a past-programmes archive below. The homepage is untouched (it keeps its own events list).
+- **Registration rules (enforced on the server):** valid name and phone, one registration per phone number per event, registration limit, closed/past events refused. Email is optional and needs a tick to agree to a reminder. The public can never read registrations.
+- **Admin > Events:** add/edit events (date and time, venue, details, limit, poster), open/close registration, see registrations, tick who attended, download a CSV.
+- **Reminders:** the daily job (08:00 Nigeria time) emails each registrant who gave an email once, when the event is within about 40 hours. Unsubscribe link included; test mode and the opt-out list are respected.
+- Run `supabase/migration-8-events.sql` (already applied to your project).

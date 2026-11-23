@@ -54,7 +54,7 @@ const dispatch = async (ch, member, address, text, subject) => {
   }
   if (ch === "email") {
     if (!gmail.configured()) return { skipped: "email not configured" };
-    const t = member.id ? token.sign({ m: member.id, c: "email" }) : member.attendance_id ? token.sign({ a: member.attendance_id, c: "email" }) : null;
+    const t = member.id ? token.sign({ m: member.id, c: "email" }) : member.attendance_id ? token.sign({ a: member.attendance_id, c: "email" }) : address ? token.sign({ e: address, c: "email" }) : null;
     const unsubscribeUrl = t ? `${siteUrl()}/api/comms/unsubscribe?t=${t}` : null;
     const subj = subject || "A message from DCF UNN", body = render({ subject: subj, text, unsubscribeUrl });
     const headers = unsubscribeUrl ? { "List-Unsubscribe": `<${unsubscribeUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } : undefined;

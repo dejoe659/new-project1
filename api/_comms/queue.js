@@ -85,7 +85,7 @@ async function expandCampaign(campaign) {
 
 // Sends one claimed row. Returns the new state of the row.
 async function sendRow(row) {
-  const member = { id: row.member_id, attendance_id: row.attendance_id, email_ok: !!row.attendance_id, full_name: row.recipient_name, email: row.channel === "email" ? row.recipient_address : null, phone: row.channel === "email" ? null : row.recipient_address };
+  const member = { id: row.member_id, attendance_id: row.attendance_id, email_ok: !!row.attendance_id, consent: !row.member_id && !row.attendance_id && row.channel === "email" ? { email: true, sms: false, whatsapp: false } : undefined, full_name: row.recipient_name, email: row.channel === "email" ? row.recipient_address : null, phone: row.channel === "email" ? null : row.recipient_address };
   const out = await sendAll({ member, channels: [row.channel], subject: row.subject, message: row.body, kind: row.category || "announcement", queueId: row.id, attempt: row.attempts });   // row.attempts already counts this send (it was incremented when the row was claimed)
   const st = out[row.channel], why = out.reasons[row.channel];
   const now = new Date();
