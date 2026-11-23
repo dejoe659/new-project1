@@ -254,3 +254,9 @@ Left on purpose (the Supabase advisor still lists them, and they are needed):
 - `check_in` and `check_in_visitor` are callable without sign-in because the public check-in page uses them. They only accept a valid service code.
 - `is_admin`, `has_admin_role` and `admin_role` are used by the admin database rules. They only answer about the caller.
 One thing only you can do: turn on **Leaked password protection** in Supabase (Authentication > Sign In / Providers > Password security). Supabase offers it on paid plans only.
+
+## Passwords: easy to reset
+- **Signed in:** "Change my password" on /admin and /coordinator (no email needed).
+- **Forgot it:** "Forgot password?" on the sign-in page emails a reset link.
+- **Locked out / no email arrives:** a super administrator opens Admin > Academic help > "Reset a password" (or "Reset password" on a coordinator's card), enters the email and gets a temporary password shown once. Recorded in the audit log.
+- Supabase settings that make the emailed link reliable (dashboard only): add https://dcf-unn-site.vercel.app/** under Authentication > URL Configuration > Redirect URLs, and set Authentication > SMTP to the fellowship Gmail (smtp.gmail.com, port 465, app password) because the built-in sender allows only a few emails an hour.

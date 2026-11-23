@@ -1,7 +1,7 @@
 // Academic help: a student picks their faculty and department, describes the course problem, and the fellowship's faculty coordinators help.
 //   Public:       { action: "faculties" | "submit" | "status" }
 //   Staff:        { action: "access" | "list" | "get" | "update" }           (a super administrator, or a faculty coordinator limited to their faculties)
-//   Super admin:  { action: "coords" | "coord_add" | "coord_update" | "coord_remove" | "dept_add" | "dept_remove" | "faculty_add" }
+//   Super admin:  { action: "coords" | "coord_add" | "coord_update" | "coord_remove" | "reset_password" | "dept_add" | "dept_remove" | "faculty_add" }
 // Faculty coordinators are NOT rows in the admins table, so they have no database permissions. They only ever reach data through this file,
 // which limits them to their own faculties and to the abilities the super administrator ticked for them.
 const crypto = require("crypto");
@@ -178,6 +178,20 @@ const boss = {
     await srv(`academic_coordinators?id=eq.${b.id}`, { method: "DELETE" });
     await audit(me, "academic.coord_remove", null, { id: b.id });
     return { ok: true };
+  },
+  // Gives a coordinator or administrator a new temporary password, shown once. Only a super administrator can do this.
+  async reset_password(b, req, me) {
+    const email = text(b.email, 200).toLowerCase();
+    if (!EMAIL_RE.test(email)) throw new Bad("Enter the email address of the account.");
+    const list = await fetch(`${SB()}/auth/v1/admin/users?page=1&per_page=1000`, { headers: adminHeaders() });
+    if (!list.ok) throw new Bad("Could not look up the account. Please try again.", 502);
+    const user = ((await list.json()).users || []).find((u) => String(u.email || "").toLowerCase() === email);
+    if (!user) throw new Bad("There is no sign-in with that email.", 404);
+    const pw = tempPassword();
+    const r = await fetch(`${SB()}/auth/v1/admin/users/${user.id}`, { method: "PUT", headers: adminHeaders(), body: JSON.stringify({ password: pw }) });
+    if (!r.ok) throw new Bad("Could not change the password. Please try again.", 502);
+    await audit(me, "academic.reset_password", null, { email });
+    return { ok: true, email, temp_password: pw };
   },
   async faculty_add(b, req, me) {
     const name = text(b.name, 120); if (name.length < 2) throw new Bad("Enter the faculty name.");

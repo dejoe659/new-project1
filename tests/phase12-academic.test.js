@@ -15,17 +15,19 @@ function setup() {
     academic_requests: [], admin_audit_logs: [],
   });
   db.install({});
-  const inner = global.fetch; const created = [];
+  const inner = global.fetch; const created = [], resets = [];
   global.fetch = async (url, opt = {}) => {
     const tok = String((opt.headers || {}).Authorization || "").replace("Bearer ", ""), u = USERS[tok];
     if (url.includes("/auth/v1/user")) return u ? { ok: true, status: 200, json: async () => ({ id: "uid-" + tok, email: u.email }) } : { ok: false, status: 401, json: async () => ({}) };
+    if (/\/auth\/v1\/admin\/users\?/.test(url)) return { ok: true, status: 200, json: async () => ({ users: [{ id: "user-eng", email: "Eng@x.com" }] }) };
+    if (/\/auth\/v1\/admin\/users\/user-eng/.test(url) && opt.method === "PUT") { resets.push(JSON.parse(opt.body)); return { ok: true, status: 200, json: async () => ({}) }; }
     if (url.includes("/auth/v1/admin/users")) { const b = JSON.parse(opt.body); if (b.email === "exists@x.com") return { ok: false, status: 422, json: async () => ({}) }; created.push(b); return { ok: true, status: 200, json: async () => ({ id: "new" }) }; }
     if (url.includes("/rest/v1/admins")) return { ok: true, status: 200, json: async () => (u && u.role ? [{ role: u.role }] : []) };
     return inner(url, opt);
   };
   const router = api("comms/[action].js"); let ip = 0;
   const call = async (token, body, ipAddr) => { const r = res(); await router({ method: "POST", query: { action: "academic" }, headers: { ...(token ? { authorization: "Bearer " + token } : {}), "x-forwarded-for": ipAddr || "8.8.8." + ++ip }, body }, r); return r; };
-  return { db, call, created };
+  return { db, call, created, resets };
 }
 const help = (o = {}) => ({ action: "submit", faculty_id: F1, department_id: D1, course: "CVE 301", level: "300", issue: "I do not understand structures.", name: "Ada", phone: "08031234567", ...o });
 
@@ -110,4 +112,17 @@ test("super admin can change a coordinator's faculties and switch them off, and 
   assert.equal((await s.call("boss", { action: "dept_add", faculty_id: F1, name: "Mining Engineering" })).code, 200);
   assert.equal(s.db.t.departments.length, 3);
   assert.equal((await s.call("eng", { action: "dept_add", faculty_id: F1, name: "X" })).code, 403);
+});
+
+test("only a super administrator can reset a password; the new one is shown once and never stored", async () => {
+  const s = setup();
+  assert.equal((await s.call("eng", { action: "reset_password", email: "eng@x.com" })).code, 403);
+  assert.equal((await s.call("nobody", { action: "reset_password", email: "eng@x.com" })).code, 403);
+  const r = await s.call("boss", { action: "reset_password", email: "ENG@x.com" });
+  assert.equal(r.code, 200); assert.match(r.body.temp_password, /^[A-Z2-9]{4}-[A-Z2-9]{5}-[A-Z2-9]{5}$/);
+  assert.equal(s.resets.length, 1); assert.equal(s.resets[0].password, r.body.temp_password);
+  assert.equal(JSON.stringify(s.db.t).includes(r.body.temp_password), false);
+  assert.ok(s.db.t.admin_audit_logs.some((l) => l.action === "academic.reset_password"));
+  assert.equal((await s.call("boss", { action: "reset_password", email: "ghost@x.com" })).code, 404);
+  assert.equal((await s.call("boss", { action: "reset_password", email: "bad" })).code, 400);
 });
