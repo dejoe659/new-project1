@@ -225,3 +225,9 @@ When a visitor checks in, the page asks the server to send them one thank-you by
 - **Admin > Sermons:** add or edit a resource, upload an audio file (MP3, M4A, WAV, OGG) or a PDF up to 50 MB, or paste a YouTube or other https link, or type written content. Feature, hide/publish, delete (deleting also removes the uploaded file). Only super and content administrators can change resources.
 - **Video tip:** upload long videos to YouTube and paste the link here; the free storage limit is 50 MB per file.
 - The public can read published items only (checked in the database). Run `supabase/migration-10-resources.sql` (already applied).
+
+## Phase 11: Freshers' support and academic support
+- Public pages `/freshers` and `/academic` list published library entries of type "Freshers' guide" / "Academic support".
+- Manage them in Admin > Sermons: choose the type, add title, topic, short description, optional long text and optional link.
+- They do not appear in the Sermons library. Both pages link to the private care team (`/care`) for personal help.
+- Database change: `supabase/migration-11-guides.sql` (already applied to the live project).

@@ -229,7 +229,7 @@ async function careClick(b){const id=b.dataset.id,a=b.dataset.care;
   if(a==="del"){if(!confirm("Delete this request permanently? This cannot be undone."))return;await careCall({action:"delete",id});return renderCare()}
  }catch(x){alert(x.message)}}
 // ---- Sermons and resources: add, edit, upload audio or PDF, feature, publish, delete
-let editRes=null;const RKIND={sermon:"Sermon",audio:"Audio message",video:"Video teaching",study:"Bible study",discipleship:"Discipleship",devotional:"Devotional"};
+let editRes=null;const RKIND={sermon:"Sermon",audio:"Audio message",video:"Video teaching",study:"Bible study",discipleship:"Discipleship",devotional:"Devotional",fresher:"Freshers' guide",academic:"Academic support"};
 const SERMON_BASE="/storage/v1/object/public/sermons/";
 async function renderRes(){
  const{data,error}=await sb.from("resources").select("*").order("published_on",{ascending:false}).order("created_at",{ascending:false});if(error)return V.textContent=error.message;
