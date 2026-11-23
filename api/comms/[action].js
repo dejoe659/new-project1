@@ -7,6 +7,7 @@ const routes = {
   campaigns: require("../_comms/campaigns"),
   "queue-run": require("../_comms/queue-run"),
   events: require("../_comms/events"),
+  care: require("../_comms/care"),
 };
 module.exports = async (req, res) => {
   const h = routes[String((req.query && req.query.action) || "")];

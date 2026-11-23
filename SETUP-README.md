@@ -211,3 +211,11 @@ When a visitor checks in, the page asks the server to send them one thank-you by
 - **Admin > Events:** add/edit events (date and time, venue, details, limit, poster), open/close registration, see registrations, tick who attended, download a CSV.
 - **Reminders:** the daily job (08:00 Nigeria time) emails each registrant who gave an email once, when the event is within about 40 hours. Unsubscribe link included; test mode and the opt-out list are respected.
 - Run `supabase/migration-8-events.sql` (already applied to your project).
+
+## Phase 9: Prayer and counselling centre (/care)
+- **Public page `/care`:** a private prayer request or counselling request. The person can stay anonymous. They get a one-time code (shown once, stored only as a hash) to check the status later. The status page shows only "Received / Being looked at / Prayed / Follow-up / Closed", never the content or the team's notes.
+- **Who can read requests:** only signed-in administrators who a super administrator has added to the **care team** (Admin > Care). Roles: *counsellor* sees everything; *prayer team* sees only prayer requests marked for the prayer team. Counselling requests, and prayer requests marked "counsellors only", are visible to counsellors only. A super administrator is NOT automatically allowed to read requests.
+- **Database:** the two tables (`care_requests`, `care_team`) have no public or normal-login access at all. Only the server reads them, after checking who is asking.
+- **Audit:** opening, updating or deleting a request, and any change to the care team, is written to the audit log (never the content).
+- **Safety:** at most 5 requests per hour from one address; spam trap field; the team gets an email saying a request arrived (never its content).
+- **First step for you:** Admin > Care > add yourself (and your counsellors) to the care team. Run `supabase/migration-9-care.sql` (already applied).

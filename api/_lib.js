@@ -21,4 +21,4 @@ const handler=(cfg)=>async(req,res)=>{
   if(cfg.after)await cfg.after(d,b); // optional hook, e.g. welcome message
   res.status(200).json({message:cfg.ok});
  }catch(e){console.error(e);res.status(500).json({error:"Server error."})}};
-module.exports={db,handler,K};
+module.exports={db,handler,K,mail};
