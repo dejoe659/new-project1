@@ -243,3 +243,14 @@ When a visitor checks in, the page asks the server to send them one thank-you by
 ## Phase 13: Overview statistics and homepage menu
 - Admin > Overview shows members (total, waiting approval, by department and level), attendance for the last 8 weeks (members vs visitors), events, testimonies and messages. Super administrators also see counts for care and academic help (numbers only, never text).
 - The homepage was not redesigned. Only its top menu gained the links to Events, Freshers, Academics, Sermons and Prayer.
+
+## Phase 14: Security pass
+Done in `supabase/migration-13-security.sql` and `vercel.json`:
+- Trigger functions have a fixed search path; the preference trigger function can no longer be called over the API.
+- Private tables (care, care team, academic requests, coordinators) have an explicit "deny everyone" policy. Only the server, using the secret key, reads them.
+- Public tables (faculties, departments, resources) offer read-only access to the public; extra privileges were removed.
+- Security headers on every page (no framing, no content sniffing, strict referrer, camera/microphone off, HTTPS only).
+Left on purpose (the Supabase advisor still lists them, and they are needed):
+- `check_in` and `check_in_visitor` are callable without sign-in because the public check-in page uses them. They only accept a valid service code.
+- `is_admin`, `has_admin_role` and `admin_role` are used by the admin database rules. They only answer about the caller.
+One thing only you can do: turn on **Leaked password protection** in Supabase (Authentication > Sign In / Providers > Password security). Supabase offers it on paid plans only.
