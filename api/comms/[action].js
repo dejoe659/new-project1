@@ -9,6 +9,7 @@ const routes = {
   events: require("../_comms/events"),
   care: require("../_comms/care"),
   academic: require("../_comms/academic"),
+  stats: require("../_comms/stats"),
 };
 module.exports = async (req, res) => {
   const h = routes[String((req.query && req.query.action) || "")];

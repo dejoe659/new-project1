@@ -239,3 +239,7 @@ When a visitor checks in, the page asks the server to send them one thank-you by
 - A super administrator creates them in Admin > Academic help: email, faculties, and two tick-boxes (may see contact details, may change status and notes). A temporary password is shown once. Access can be edited, switched off or removed at any time.
 - Opening or changing a request is written to the audit log (never the problem text).
 - Database change: `supabase/migration-12-academic.sql` (already applied to the live project).
+
+## Phase 13: Overview statistics and homepage menu
+- Admin > Overview shows members (total, waiting approval, by department and level), attendance for the last 8 weeks (members vs visitors), events, testimonies and messages. Super administrators also see counts for care and academic help (numbers only, never text).
+- The homepage was not redesigned. Only its top menu gained the links to Events, Freshers, Academics, Sermons and Prayer.
