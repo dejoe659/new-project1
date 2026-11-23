@@ -7,7 +7,7 @@
 <main><section id="login" class="narrow"><h1>Admin sign in</h1><form id="lf" class="form"><label>Email<input id="em" type="email" required autocomplete="username"></label><label>Password<input id="pw" type="password" required autocomplete="current-password"></label><button class="btn">Sign in</button><p class="msg" id="lm" role="status"></p></form><p><a href="#" id="fg">Forgot password?</a></p></section>
 <section id="app" hidden><div class="bar"><strong id="who"></strong><button class="btn sm" id="out">Sign out</button></div>
 <div class="tabs" id="tabs"><button data-t="members" class="on">Registrations</button><button data-t="testimonies">Testimonies</button><button data-t="events">Events</button><button data-t="gallery">Gallery</button><button data-t="attendance">Attendance</button><button data-t="followup">Follow-up</button><button data-t="approvals">Approvals</button><button data-t="messages">Messages sent</button><button data-t="report">Report</button><button data-t="care">Care</button><button data-t="sermons">Sermons</button><button data-t="academic">Academic help</button></div><div id="view"></div></section></main>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script><script src="/assets/acad-console.js?v=1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script><script src="/assets/acad-console.js?v=2"></script>
 <script>
 const U="https://takdaiqvaxancqrqwwhy.supabase.co",K="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRha2RhaXF2YXhhbmNxcnF3d2h5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyMDkyNDUsImV4cCI6MjEwODc4NTI0NX0.cMNEb_tr1gRtVRwJa5kQqvqctyR9UjdroJ34umG4L8Q";
 const sb=supabase.createClient(U,K),$=s=>document.querySelector(s),V=$("#view");let tab="members",cache={};
@@ -204,7 +204,7 @@ const careCall=async b=>{const{data:{session}}=await sb.auth.getSession();if(!se
  const j=await r.json().catch(()=>({}));if(!r.ok){const e=new Error(j.error||"Something went wrong.");e.code=r.status;throw e}return j};
 let acadMounted=null;
 async function acadCall(b){const{data:{session}}=await sb.auth.getSession();const r=await fetch("/api/comms/academic",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+(session?session.access_token:"")},body:JSON.stringify(b)});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"Something went wrong.");return j}
-function renderAcad(){V.innerHTML='<div id="acmount"></div>';AcadConsole.mount($("#acmount"),acadCall)}
+function renderAcad(){V.innerHTML='<p>Loading academic help...</p><div id="acmount"></div>';try{if(!window.AcadConsole)throw new Error("The academic help script did not load. Refresh the page (Ctrl+Shift+R), or clear this site\'s data, and try again.");AcadConsole.mount($("#acmount"),acadCall);setTimeout(()=>{const l=V.querySelector("p");if(l&&l.textContent.startsWith("Loading academic")&&$("#acmount").children.length)l.remove()},1500)}catch(x){V.innerHTML=`<p class="msg err">${esc(x.message)}</p>`}}
 const CSTAT={new:"New",in_progress:"In progress",prayed:"Prayed",follow_up:"Needs follow-up",closed:"Closed"};
 let careFilter="";
 async function renderCare(){

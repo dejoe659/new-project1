@@ -3,7 +3,7 @@
 <header class="top"><a class="brand" href="/"><img class="logo" src="/assets/logo.jpg" alt="DCF logo" width="40" height="40"><span>DCF UNN</span></a></header>
 <main><section id="login" class="narrow"><h1>Faculty coordinator sign in</h1><form id="lf" class="form"><label>Email<input id="em" type="email" required autocomplete="username"></label><label>Password<input id="pw" type="password" required autocomplete="current-password"></label><button class="btn">Sign in</button><p class="msg" id="lm" role="status"></p></form><p><a href="#" id="fg">Forgot password?</a></p></section>
 <section id="app" hidden><div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap"><p id="who"></p><button id="out" class="btn sm">Sign out</button></div><div id="mount"></div></section></main>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script><script src="/assets/acad-console.js?v=1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script><script src="/assets/acad-console.js?v=2"></script>
 <script>
 const U="https://takdaiqvaxancqrqwwhy.supabase.co",K="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRha2RhaXF2YXhhbmNxcnF3d2h5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyMDkyNDUsImV4cCI6MjEwODc4NTI0NX0.cMNEb_tr1gRtVRwJa5kQqvqctyR9UjdroJ34umG4L8Q";
 const sb=supabase.createClient(U,K),$=s=>document.querySelector(s);let started=false;
