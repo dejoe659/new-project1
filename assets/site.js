@@ -8,7 +8,7 @@ const shrink=async f=>{if(!/^image\//.test(f.type))throw new Error("Please choos
 const uploadPhoto=async f=>{if(f.size>10485760)throw new Error("That photo is too large (max 10 MB).");const b=await shrink(f),n=crypto.randomUUID()+".jpg";
  const r=await fetch(SB_URL+"/storage/v1/object/member-photos/"+n,{method:"POST",headers:{apikey:SB_KEY,Authorization:"Bearer "+SB_KEY,"Content-Type":"image/jpeg"},body:b});
  if(!r.ok)throw new Error("Photo upload failed.");return SB_URL+"/storage/v1/object/public/member-photos/"+n};
-$$("form.form").forEach(f=>f.addEventListener("submit",async e=>{e.preventDefault();const m=$(".msg",f);m.className="msg";
+$$("form.form:not([data-own])").forEach(f=>f.addEventListener("submit",async e=>{e.preventDefault();const m=$(".msg",f);m.className="msg";
  if(!f.checkValidity()){m.textContent="Please complete the required fields.";m.classList.add("err");return}
  const d=Object.fromEntries(new FormData(f));delete d.photo;$$("input[type=checkbox]",f).forEach(c=>d[c.name]=c.checked);
  const b=$("button",f);b.disabled=true;

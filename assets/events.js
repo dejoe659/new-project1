@@ -5,7 +5,7 @@ const when=e=>e.starts_at?new Date(e.starts_at).toLocaleString("en-GB",{weekday:
 const card=(e,isPast)=>`<article class="card" id="ev-${esc(e.id)}">${e.poster_url?`<img loading="lazy" src="${esc(e.poster_url)}" alt="Poster for ${esc(e.title)}">`:""}<h3>${esc(e.title)}</h3>
  <p class="k"><strong>When:</strong> ${esc(when(e))}</p>${e.venue?`<p class="k"><strong>Where:</strong> ${esc(e.venue)}</p>`:""}${e.details?`<p>${esc(e.details)}</p>`:""}
  ${isPast?"":e.full?`<p class="msg err">This event is full.</p>`:!e.can_register?`<p class="msg">Registration is closed.</p>`:`${e.spots_left!==null?`<p class="k"><strong>Spots left:</strong> ${e.spots_left}</p>`:""}
- <details><summary class="btn sm">Register</summary><form class="form evf" data-id="${esc(e.id)}" novalidate>
+ <details><summary class="btn sm">Register</summary><form class="form evf" data-own data-id="${esc(e.id)}" novalidate>
  <label>Full name<input name="full_name" required maxlength="120" autocomplete="name"></label><label>Phone number<input name="phone" type="tel" required maxlength="30" autocomplete="tel"></label>
  <label>Email (optional, for a reminder)<input name="email" type="email" maxlength="200" autocomplete="email"></label>
  <label class="ck"><input type="checkbox" name="agree"> Email me a reminder before the event.</label>
