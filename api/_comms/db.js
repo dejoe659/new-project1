@@ -15,4 +15,6 @@ async function srv(path, opt = {}) {
   if (r.status === 204 || (!json && o.method === "POST")) return null;
   return r.json();
 }
-module.exports = { SB, srv, hasSrv };
+// Headers for the Auth admin API (creating a login). Server only.
+const adminHeaders = () => ({ ...authHeaders(key()), "Content-Type": "application/json" });
+module.exports = { SB, srv, hasSrv, adminHeaders };

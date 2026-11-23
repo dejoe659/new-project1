@@ -231,3 +231,11 @@ When a visitor checks in, the page asks the server to send them one thank-you by
 - Manage them in Admin > Sermons: choose the type, add title, topic, short description, optional long text and optional link.
 - They do not appear in the Sermons library. Both pages link to the private care team (`/care`) for personal help.
 - Database change: `supabase/migration-11-guides.sql` (already applied to the live project).
+
+## Phase 12: Faculty academic help and limited coordinators
+- All 17 UNN faculties and their departments are in the database (`faculties`, `departments`). The department lists were entered from general knowledge, so check them: Admin > Academic help > "Faculties and departments" lets a super administrator add, remove or correct any name.
+- Students use the form on `/academic`: faculty, department, course, level, problem and contact. They get a private code to check status. Requests are private and server-only.
+- Faculty coordinators sign in at `/coordinator`. They are NOT in the `admins` table, so they have no database access and cannot open `/admin`. The server shows them only their own faculties.
+- A super administrator creates them in Admin > Academic help: email, faculties, and two tick-boxes (may see contact details, may change status and notes). A temporary password is shown once. Access can be edited, switched off or removed at any time.
+- Opening or changing a request is written to the audit log (never the problem text).
+- Database change: `supabase/migration-12-academic.sql` (already applied to the live project).

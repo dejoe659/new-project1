@@ -1,0 +1,19 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Faculty coordinator | DCF UNN</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;800&family=Libre+Franklin:wght@400;500;600&display=swap"><link rel="stylesheet" href="/assets/style.css"></head><body>
+<header class="top"><a class="brand" href="/"><img class="logo" src="/assets/logo.jpg" alt="DCF logo" width="40" height="40"><span>DCF UNN</span></a></header>
+<main><section id="login" class="narrow"><h1>Faculty coordinator sign in</h1><form id="lf" class="form"><label>Email<input id="em" type="email" required autocomplete="username"></label><label>Password<input id="pw" type="password" required autocomplete="current-password"></label><button class="btn">Sign in</button><p class="msg" id="lm" role="status"></p></form><p><a href="#" id="fg">Forgot password?</a></p></section>
+<section id="app" hidden><div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap"><p id="who"></p><button id="out" class="btn sm">Sign out</button></div><div id="mount"></div></section></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script><script src="/assets/acad-console.js?v=1"></script>
+<script>
+const U="https://takdaiqvaxancqrqwwhy.supabase.co",K="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRha2RhaXF2YXhhbmNxcnF3d2h5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyMDkyNDUsImV4cCI6MjEwODc4NTI0NX0.cMNEb_tr1gRtVRwJa5kQqvqctyR9UjdroJ34umG4L8Q";
+const sb=supabase.createClient(U,K),$=s=>document.querySelector(s);let started=false;
+const call=async b=>{const{data:{session}}=await sb.auth.getSession();const r=await fetch("/api/comms/academic",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+(session?session.access_token:"")},body:JSON.stringify(b)});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"Something went wrong.");return j};
+async function boot(){const{data:{session}}=await sb.auth.getSession();if(!session){$("#login").hidden=false;$("#app").hidden=true;return}
+ try{const a=await call({action:"access"});$("#who").textContent=session.user.email;$("#login").hidden=true;$("#app").hidden=false;if(!started){started=true;AcadConsole.mount($("#mount"),call)}}
+ catch(x){$("#lm").textContent=x.message;await sb.auth.signOut();$("#login").hidden=false;$("#app").hidden=true}}
+$("#lf").onsubmit=async e=>{e.preventDefault();$("#lm").textContent="";const{error}=await sb.auth.signInWithPassword({email:$("#em").value,password:$("#pw").value});if(error){$("#lm").textContent=error.message;return}boot()};
+$("#out").onclick=async()=>{await sb.auth.signOut();started=false;location.reload()};
+$("#fg").onclick=async e=>{e.preventDefault();if(!$("#em").value){$("#lm").textContent="Type your email first.";return}await sb.auth.resetPasswordForEmail($("#em").value,{redirectTo:location.origin+"/coordinator"});$("#lm").textContent="If that account exists, a reset email was sent."};
+sb.auth.onAuthStateChange(async ev=>{if(ev==="PASSWORD_RECOVERY"){const p=prompt("Enter a new password (at least 8 characters):");if(p&&p.length>=8){const{error}=await sb.auth.updateUser({password:p});alert(error?error.message:"Password updated.")}}});
+boot();
+</script></body></html>
