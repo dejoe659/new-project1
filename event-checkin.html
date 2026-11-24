@@ -1,0 +1,18 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Event check-in | DCF UNN</title><meta name="theme-color" content="#14451f">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;800&family=Libre+Franklin:wght@400;500;600&display=swap"><link rel="stylesheet" href="/assets/style.css"></head><body>
+<header class="top"><a class="brand" href="/"><img class="logo" src="/assets/logo.jpg" alt="DCF logo" width="40" height="40"><span>DCF UNN</span></a><a class="btn sm" href="/">Home</a></header>
+<main><section class="narrow"><h1 id="et">Event check-in</h1><p id="ed">Enter your phone number to check in.</p>
+<form id="ec" class="form" novalidate><label>Phone number<input id="ph" type="tel" required placeholder="08012345678" autocomplete="tel"></label>
+<div id="nw" hidden><p><strong>We could not find that number.</strong> Add your name to check in anyway.</p><label>Your name<input id="nm" maxlength="120"></label></div>
+<input class="hp" id="hp" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px"><button class="btn">Check in</button><p class="msg" id="em" role="status"></p></form></section></main>
+<script>
+const $=s=>document.querySelector(s),id=new URLSearchParams(location.search).get("e")||"";
+const post=async b=>{const r=await fetch("/api/comms/events",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"Something went wrong.");return j};
+const say=(t,ok)=>{$("#em").textContent=t;$("#em").className="msg "+(ok?"ok":"err")};
+(async()=>{try{const l=await post({action:"list"}),ev=[...l.upcoming,...l.past].find(x=>x.id===id);if(ev){$("#et").textContent=ev.title;$("#ed").textContent=(ev.venue?ev.venue+". ":"")+"Enter your phone number to check in."}else if(!id)say("This link is missing its event. Scan the code at the venue again.")}catch{}})();
+$("#ec").onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector("button");b.disabled=true;say("");
+ try{const r=await post({action:"checkin",event_id:id,phone:$("#ph").value,full_name:$("#nm").value,website:$("#hp").value});
+  if(r.status==="not_found"){$("#nw").hidden=false;say("Add your name below, then tap Check in again.")}
+  else{say("Welcome, "+r.name+"! You are checked in"+(r.event?" for "+r.event:"")+".",true);b.hidden=true}}
+ catch(x){say(x.message)}finally{b.disabled=false}};
+</script></body></html>

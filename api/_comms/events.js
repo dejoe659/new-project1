@@ -1,5 +1,6 @@
 // Public events endpoint: the list of upcoming and past programmes, and registration for an event.
 //   POST /api/comms/events   { action: "list" }
+//   POST /api/comms/events   { action: "checkin", event_id, phone, full_name? }   (QR check-in at the event)
 //   POST /api/comms/events   { action: "register", event_id, full_name, phone, email?, agree: true }
 // Registration is written with the server key (the public cannot read or write registrations directly), so the rules below cannot be bypassed.
 const { srv, hasSrv } = require("./db");
@@ -23,7 +24,31 @@ const shape = (e, taken, now) => {
     can_register: !!e.starts_at && !past && e.registration_open !== false && (left === null || left > 0), full: left === 0 };
 };
 
+// Event check-in opens 3 hours before the start and closes 12 hours after, so a scanned code cannot be used on another day.
+const CHECKIN_BEFORE = 3 * 36e5, CHECKIN_AFTER = 12 * 36e5;
 const actions = {
+  async checkin(b) {
+    if (b.website) return { status: "ok", name: "friend" };
+    if (!UUID.test(String(b.event_id || ""))) throw new Bad("Unknown event.");
+    const ev = (await srv(`events?id=eq.${b.event_id}&select=${COLS}&limit=1`))[0];
+    if (!ev || !ev.starts_at) throw new Bad("That event was not found.", 404);
+    const start = new Date(ev.starts_at).getTime(), now = Date.now();
+    if (now < start - CHECKIN_BEFORE) throw new Bad("Check-in has not opened yet. It opens 3 hours before the event starts.", 409);
+    if (now > start + CHECKIN_AFTER) throw new Bad("Check-in for this event has closed.", 409);
+    const p = normalize(String(b.phone || ""));
+    if (!p.ok) throw new Bad("Enter a valid phone number.");
+    const reg = (await srv(`event_registrations?event_id=eq.${ev.id}&phone_key=eq.${p.digits}&select=id,full_name&limit=1`))[0];
+    if (reg) {
+      await srv(`event_registrations?id=eq.${reg.id}`, { method: "PATCH", body: JSON.stringify({ attended: true }) });
+      return { status: "ok", name: reg.full_name, event: ev.title };
+    }
+    // Not registered beforehand: a walk-in. Ask for a name, then record them as present.
+    const name = typeof b.full_name === "string" ? b.full_name.trim().slice(0, 120) : "";
+    if (name.length < 2) return { status: "not_found" };
+    try { await srv("event_registrations", { method: "POST", body: JSON.stringify({ event_id: ev.id, full_name: name, phone: String(b.phone).trim().slice(0, 30), phone_key: p.digits, attended: true }) }); }
+    catch (err) { /* two quick taps: already recorded */ }
+    return { status: "ok", name, event: ev.title };
+  },
   async list() {
     const now = Date.now();
     const rows = await srv(`events?starts_at=not.is.null&select=${COLS}&order=starts_at.asc&limit=200`);

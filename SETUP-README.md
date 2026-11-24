@@ -276,3 +276,8 @@ One thing only you can do: turn on **Leaked password protection** in Supabase (A
 - Approving an alumnus sends them one thank-you email with the link to the page (and what happens if they said they would mentor).
 - Admin > Alumni > a mentor request shows "Introduce <mentor>" buttons: the mentor is emailed the student's request and contact details, the student is emailed who will reach out (the mentor's contact is not given to the student), and the request becomes "matched". If the mentor email cannot be sent, nothing is recorded.
 - Overview shows alumni listed, waiting and open mentor requests; the Monday summary counts them; the backup downloads include alumni.
+
+## Phase 17: QR check-in
+- **Services:** Admin > Attendance > "Show QR code" on a session opens a full-screen code to project. Scanning it opens /checkin with the service code filled in; the person only types their phone number.
+- **Events:** Admin > Events > "QR check-in" shows a code for /event-checkin?e=<event>. People enter their phone number; registered people are marked present, and walk-ins add their name and are recorded as present. Opens 3 hours before the event starts and closes 12 hours after.
+- **Alumni:** /alumni now has two buttons at the top ("join the list" and "find a mentor"). Share https://dcf-unn-site.vercel.app/alumni#join with graduates.
