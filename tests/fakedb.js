@@ -36,7 +36,7 @@ function create(seed = {}) {
       const keys = UNIQUE[table] || [];
       if (keys.length && rows.some((r) => keys.every((k) => r[k] === body[k]))) { if (prefer.includes("ignore-duplicates")) return res(prefer.includes("representation") ? [] : null, prefer.includes("representation") ? 200 : 201); return res({ message: "duplicate" }, 409); }
       if (table === "message_log" && body.provider_message_id && rows.some((r) => r.provider === body.provider && r.provider_message_id === body.provider_message_id)) return res({ message: "duplicate" }, 409);
-      const row = { id: ["campaigns", "care_requests", "academic_requests", "academic_coordinators", "faculties", "departments"].includes(table) ? require("crypto").randomUUID() : "id" + ++n, received_at: new Date().toISOString(), created_at: new Date().toISOString(), updated_at: new Date().toISOString(), ...body }; rows.push(row);
+      const row = { id: ["campaigns", "care_requests", "academic_requests", "academic_coordinators", "faculties", "departments", "alumni", "mentor_requests"].includes(table) ? require("crypto").randomUUID() : "id" + ++n, received_at: new Date().toISOString(), created_at: new Date().toISOString(), updated_at: new Date().toISOString(), ...body }; rows.push(row);
       return prefer.includes("representation") ? res([row], 201) : res(null, 201);
     }
     if (method === "PATCH") { const hit = filter(rows, u.searchParams); hit.forEach((r) => Object.assign(r, body, { updated_at: new Date(Date.now() + ++n).toISOString() })); return prefer.includes("representation") ? res(hit) : res(null, 204); }

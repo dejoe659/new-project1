@@ -237,3 +237,5 @@ module.exports = async (req, res) => {
     res.status(500).json({ error: "Server error. Please try again." });
   }
 };
+
+module.exports.catalog = catalog;

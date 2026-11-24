@@ -11,6 +11,7 @@ const routes = {
   academic: require("../_comms/academic"),
   stats: require("../_comms/stats"),
   export: require("../_comms/export"),
+  alumni: require("../_comms/alumni"),
 };
 module.exports = async (req, res) => {
   const h = routes[String((req.query && req.query.action) || "")];

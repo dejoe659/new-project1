@@ -265,3 +265,9 @@ One thing only you can do: turn on **Leaked password protection** in Supabase (A
 - A new academic help request emails the fellowship inbox and the active coordinators of that faculty. The email says only that a request is waiting. Student details are never emailed.
 - Every Monday (08:00 Lagos, as part of the daily job) the fellowship inbox gets a summary of counts: new members, waiting approvals, check-ins, open care and academic requests, upcoming events, failed messages.
 - Admin > Overview > "Download a backup" (super administrators): CSV files for members, attendance, events, event sign-ups and testimonies. Care and academic requests are never exported. Each download is audit-logged, and cells starting with = + - @ are neutralised so a spreadsheet will not run them.
+
+## Phase 16: Alumni and mentors
+- `/alumni`: graduates join (name, year, faculty, department, work, city, email and phone kept private, willing to mentor, consent to be listed). Nothing is shown until an administrator approves it.
+- Students ask for a mentor on the same page. They never contact alumni directly: an administrator sees the request plus the approved mentors in that faculty and makes the introduction.
+- Admin > Alumni (super and content administrators): approve, reject, mark as mentor, delete; manage mentor requests with a status and a private note.
+- Database: `supabase/migration-14-alumni.sql` (already applied). Tables are server-only.
