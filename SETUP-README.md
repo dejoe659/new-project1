@@ -260,3 +260,8 @@ One thing only you can do: turn on **Leaked password protection** in Supabase (A
 - **Forgot it:** "Forgot password?" on the sign-in page emails a reset link.
 - **Locked out / no email arrives:** a super administrator opens Admin > Academic help > "Reset a password" (or "Reset password" on a coordinator's card), enters the email and gets a temporary password shown once. Recorded in the audit log.
 - Supabase settings that make the emailed link reliable (dashboard only): add https://dcf-unn-site.vercel.app/** under Authentication > URL Configuration > Redirect URLs, and set Authentication > SMTP to the fellowship Gmail (smtp.gmail.com, port 465, app password) because the built-in sender allows only a few emails an hour.
+
+## Phase 15: Alerts, weekly summary, backups
+- A new academic help request emails the fellowship inbox and the active coordinators of that faculty. The email says only that a request is waiting. Student details are never emailed.
+- Every Monday (08:00 Lagos, as part of the daily job) the fellowship inbox gets a summary of counts: new members, waiting approvals, check-ins, open care and academic requests, upcoming events, failed messages.
+- Admin > Overview > "Download a backup" (super administrators): CSV files for members, attendance, events, event sign-ups and testimonies. Care and academic requests are never exported. Each download is audit-logged, and cells starting with = + - @ are neutralised so a spreadsheet will not run them.

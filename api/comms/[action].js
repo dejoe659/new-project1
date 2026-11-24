@@ -10,6 +10,7 @@ const routes = {
   care: require("../_comms/care"),
   academic: require("../_comms/academic"),
   stats: require("../_comms/stats"),
+  export: require("../_comms/export"),
 };
 module.exports = async (req, res) => {
   const h = routes[String((req.query && req.query.action) || "")];

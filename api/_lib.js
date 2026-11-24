@@ -6,6 +6,8 @@ const {GMAIL_USER,GMAIL_APP_PASSWORD}=process.env;
 const db=async(path,opt={})=>{const r=await fetch(`${U}/rest/v1/${path}`,{...opt,headers:{apikey:K,Authorization:`Bearer ${K}`,"Content-Type":"application/json",Prefer:"return=minimal",...opt.headers}});
  if(!r.ok)throw new Error("db "+r.status);return r.status===204||opt.method==="POST"?null:r.json()};
 const mail=async(subject,text)=>{if(!GMAIL_USER||!GMAIL_APP_PASSWORD){console.warn("Email not configured");return}try{await nodemailer.createTransport({service:"gmail",auth:{user:GMAIL_USER,pass:GMAIL_APP_PASSWORD}}).sendMail({from:GMAIL_USER,to:GMAIL_USER,subject,text})}catch(e){console.error("mail failed",e.message)}};
+// Staff notices to a specific address (never student details). Returns true if handed to Gmail.
+const mailTo=async(to,subject,text)=>{if(!GMAIL_USER||!GMAIL_APP_PASSWORD||!to)return false;try{await nodemailer.createTransport({service:"gmail",auth:{user:GMAIL_USER,pass:GMAIL_APP_PASSWORD}}).sendMail({from:GMAIL_USER,to,subject,text});return true}catch(e){console.error("mailTo failed",e.message);return false}};
 const emailOk=e=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e||"");
 const clean=(o,keys,max=2000)=>Object.fromEntries(keys.map(k=>[k,typeof o[k]==="string"?o[k].trim().slice(0,max):o[k]]));
 // Shared handler: validate, store (if table), email the fellowship.
@@ -21,4 +23,4 @@ const handler=(cfg)=>async(req,res)=>{
   if(cfg.after)await cfg.after(d,b); // optional hook, e.g. welcome message
   res.status(200).json({message:cfg.ok});
  }catch(e){console.error(e);res.status(500).json({error:"Server error."})}};
-module.exports={db,handler,K,mail};
+module.exports={db,handler,K,mail,mailTo};

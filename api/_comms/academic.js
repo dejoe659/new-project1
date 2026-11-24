@@ -82,7 +82,7 @@ const pub = {
     if (recent.length >= HOURLY_LIMIT) throw new Bad("You have sent several requests in the last hour. Please try again later.", 429);
     const code = newCode();
     await srv("academic_requests", { method: "POST", body: JSON.stringify({ code_hash: hash(code), faculty_id: fac.id, department_id, course, level, issue, name, phone, email, ip_hash: ip }) });
-    notifyTeam(fac.name).catch(() => {});
+    await notifyTeam(fac.name, fac.id).catch((e) => console.error("academic notify failed:", e.message));
     return { code: pretty(code), message: "Your request was received and sent to the coordinator for your faculty. Keep this code safe: it is the only way to check on your request, and we cannot show it again." };
   },
   async status(b) {
@@ -93,9 +93,13 @@ const pub = {
     return { received: r.created_at, status: PUBLIC_STATUS[r.status] || "Received" };
   },
 };
-async function notifyTeam(faculty) {
-  const { mail } = require("../_lib");
-  await mail("New academic help request", `A student in the Faculty of ${faculty} asked for help with a course. Faculty coordinators can open it at /coordinator. (The request itself is never sent by email.)`);
+// Tells the fellowship inbox and the faculty's active coordinators that a request is waiting. The request itself is never put in an email.
+async function notifyTeam(faculty, facultyId) {
+  const { mail, mailTo } = require("../_lib");
+  const note = `A student in the Faculty of ${faculty} asked for help with a course. Sign in to read it: https://dcf-unn-site.vercel.app/coordinator\n\n(For their privacy, the request itself is never sent by email.)`;
+  await mail("New academic help request", note);
+  const coords = await srv("academic_coordinators?select=email,faculty_ids,active&active=eq.true&limit=200");
+  for (const c of coords) if ((c.faculty_ids || []).includes(facultyId)) await mailTo(c.email, `New academic help request: Faculty of ${faculty}`, note);
 }
 
 // ---------- staff
