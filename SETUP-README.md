@@ -271,3 +271,8 @@ One thing only you can do: turn on **Leaked password protection** in Supabase (A
 - Students ask for a mentor on the same page. They never contact alumni directly: an administrator sees the request plus the approved mentors in that faculty and makes the introduction.
 - Admin > Alumni (super and content administrators): approve, reject, mark as mentor, delete; manage mentor requests with a status and a private note.
 - Database: `supabase/migration-14-alumni.sql` (already applied). Tables are server-only.
+
+## Phase 16b: Alumni improvements
+- Approving an alumnus sends them one thank-you email with the link to the page (and what happens if they said they would mentor).
+- Admin > Alumni > a mentor request shows "Introduce <mentor>" buttons: the mentor is emailed the student's request and contact details, the student is emailed who will reach out (the mentor's contact is not given to the student), and the request becomes "matched". If the mentor email cannot be sent, nothing is recorded.
+- Overview shows alumni listed, waiting and open mentor requests; the Monday summary counts them; the backup downloads include alumni.

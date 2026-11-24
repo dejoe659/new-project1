@@ -1,5 +1,5 @@
 // Backup download (CSV), super administrators only. GET /api/comms/export?table=members|attendance|events|event_registrations|testimonies
-// Private care and academic requests are deliberately NOT exportable.
+// Private care and academic requests are deliberately NOT exportable (mentor request text is left out too).
 const { srv, hasSrv } = require("./db");
 const { adminAuth } = require("./admin-auth");
 const TABLES = {
@@ -8,6 +8,8 @@ const TABLES = {
   events: "id,title,venue,starts_at,capacity,registration_open,created_at",
   event_registrations: "id,event_id,full_name,phone,email,attended,created_at",
   testimonies: "id,created_at,name,title,category,status",
+  alumni: "id,created_at,full_name,graduation_year,faculty_id,department_id,occupation,location,email,phone,mentor,status",
+  mentor_requests: "id,created_at,faculty_id,name,phone,email,status",
 };
 // Spreadsheet programs run a cell that starts with = + - @ as a formula: neutralise it.
 const cell = (v) => { if (v === null || v === undefined) return ""; let t = String(v); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };

@@ -5,6 +5,8 @@ const crypto = require("crypto");
 const { srv, hasSrv } = require("./db");
 const { adminAuth } = require("./admin-auth");
 const { normalize } = require("./phone");
+const { mailTo } = require("../_lib");
+const SITE = "https://dcf-unn-site.vercel.app";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const HOURLY_LIMIT = 5, enc = encodeURIComponent;
@@ -64,7 +66,14 @@ const adm = {
     const patch = {}; if (b.status !== undefined) { if (!["pending", "approved", "rejected"].includes(b.status)) throw new Bad("Unknown status."); patch.status = b.status; }
     if (b.mentor !== undefined) patch.mentor = b.mentor === true;
     if (!Object.keys(patch).length) throw new Bad("Nothing to change.");
-    await srv(`alumni?id=eq.${b.id}`, { method: "PATCH", body: JSON.stringify(patch) }); return { ok: true };
+    const before = (await srv(`alumni?id=eq.${b.id}&select=full_name,email,status,mentor&limit=1`))[0];
+    if (!before) throw new Bad("That record was not found.", 404);
+    await srv(`alumni?id=eq.${b.id}`, { method: "PATCH", body: JSON.stringify(patch) });
+    // Tell the person once, when they are first approved. They gave this address to join the list.
+    if (patch.status === "approved" && before.status !== "approved") {
+      await mailTo(before.email, "You are on the DCF UNN alumni page", `Hello ${before.full_name},\n\nThank you for joining the Dunamis Campus Fellowship alumni list. Your details are now on the alumni page: ${SITE}/alumni\n\n${patch.mentor ?? before.mentor ? "You said you are willing to mentor students. When a student in your faculty asks, an administrator will email you their request and contact details.\n\n" : ""}Your email and phone are never shown publicly.\n\nGod bless you.\nDCF UNN`);
+    }
+    return { ok: true };
   },
   async admin_delete(b) { if (!UUID.test(String(b.id || ""))) throw new Bad("Unknown record."); await srv(`alumni?id=eq.${b.id}`, { method: "DELETE" }); return { ok: true }; },
   async req_list(b) {
@@ -72,6 +81,20 @@ const adm = {
     const [rows, n] = await Promise.all([srv(`mentor_requests?select=*${st}&order=created_at.desc&limit=300`), names()]);
     const mentors = await srv("alumni?status=eq.approved&mentor=eq.true&select=id,full_name,faculty_id,email,phone,occupation,graduation_year&limit=500");
     return { requests: rows.map((r) => ({ id: r.id, created_at: r.created_at, faculty: n.f[r.faculty_id] || "", name: r.name, phone: r.phone, email: r.email, message: r.message, status: r.status, note: r.note, handled_by: r.handled_by, mentors: mentors.filter((m) => m.faculty_id === r.faculty_id).map(({ faculty_id, ...m }) => m) })) };
+  },
+  // Introduces a student to a mentor by email. The mentor receives the student's request and contact; the student is told who will reach out.
+  async req_introduce(b, req, me) {
+    if (!UUID.test(String(b.id || "")) || !UUID.test(String(b.alumni_id || ""))) throw new Bad("Unknown request or mentor.");
+    const r = (await srv(`mentor_requests?id=eq.${b.id}&select=*&limit=1`))[0];
+    const m = (await srv(`alumni?id=eq.${b.alumni_id}&select=*&limit=1`))[0];
+    if (!r) throw new Bad("That request was not found.", 404);
+    if (!m || m.status !== "approved" || !m.mentor || m.faculty_id !== r.faculty_id) throw new Bad("Choose an approved mentor from the same faculty.");
+    const n = await names();
+    const mentorOk = await mailTo(m.email, "A student would like your mentorship", `Hello ${m.full_name},\n\nA student in the Faculty of ${n.f[r.faculty_id]} asked the Dunamis Campus Fellowship for a mentor, and we thought of you.\n\nName: ${r.name}\nPhone: ${r.phone || "not given"}\nEmail: ${r.email || "not given"}\n\nWhat they asked:\n${r.message}\n\nPlease reach out to them when you can. If you cannot mentor right now, just reply to this email and we will find someone else.\n\nThank you for serving.\nDCF UNN`);
+    const studentOk = r.email ? await mailTo(r.email, "Your mentor request", `Hello ${r.name},\n\nThank you for asking for a mentor. We have shared your request and contact details with ${m.full_name}${m.occupation ? " (" + m.occupation + ")" : ""}, a graduate of the Faculty of ${n.f[r.faculty_id]}. They will reach out to you.\n\nIf you do not hear back within two weeks, reply to this email.\n\nGod bless you.\nDCF UNN`) : false;
+    if (!mentorOk) throw new Bad("The email to the mentor could not be sent, so nothing was recorded. Check the email setup, or contact them yourself.", 502);
+    await srv(`mentor_requests?id=eq.${r.id}`, { method: "PATCH", body: JSON.stringify({ status: "matched", handled_by: me.email, note: [r.note, `Introduced to ${m.full_name} on ${new Date().toISOString().slice(0, 10)}`].filter(Boolean).join("\n").slice(0, 1000) }) });
+    return { ok: true, mentor_emailed: true, student_emailed: studentOk };
   },
   async req_set(b, req, me) {
     if (!UUID.test(String(b.id || ""))) throw new Bad("Unknown request.");

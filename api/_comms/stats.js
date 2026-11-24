@@ -15,7 +15,8 @@ module.exports = async (req, res) => {
   try {
     const me = await adminAuth(req, res); if (!me) return;
     const now = Date.now(), d30 = enc(new Date(now - 30 * 864e5).toISOString()), d56 = enc(new Date(now - 8 * WEEK).toISOString());
-    const [members, att, events, regs, testi, queue] = await Promise.all([
+    const [alum, mreq, members, att, events, regs, testi, queue] = await Promise.all([
+      all("alumni?select=status,mentor"), all("mentor_requests?select=status"),
       all("members?select=review_status,department,level,created_at,profile_approved&order=created_at.asc"),
       all(`attendance?select=member_id,created_at&created_at=gte.${d56}&order=created_at.asc`),
       all("events?select=id,starts_at"),
@@ -31,6 +32,7 @@ module.exports = async (req, res) => {
       members: { total: members.length, by_review: tally(members, (m) => m.review_status), public_profiles: members.filter((m) => m.profile_approved).length, joined_last_30_days: members.filter((m) => new Date(m.created_at).getTime() >= now - 30 * 864e5).length, by_department: tally(members, (m) => m.department), by_level: tally(members, (m) => m.level) },
       attendance: { weeks: weeks.map((w) => ({ week: w, members: wk[w].members, visitors: wk[w].visitors })) },
       events: { upcoming: events.filter((e) => e.starts_at && new Date(e.starts_at).getTime() > now).length, registrations: regs.length, attended: regs.filter((r) => r.attended).length },
+      alumni: { approved: alum.filter((a) => a.status === "approved").length, pending: alum.filter((a) => a.status === "pending").length, mentors: alum.filter((a) => a.status === "approved" && a.mentor).length, open_mentor_requests: mreq.filter((r) => r.status === "new").length },
       testimonies: tally(testi, (t) => t.status),
       messages_last_30_days: { by_status: tally(queue, (q) => q.status), by_category: tally(queue, (q) => q.category) },
     };
