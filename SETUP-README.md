@@ -281,3 +281,11 @@ One thing only you can do: turn on **Leaked password protection** in Supabase (A
 - **Services:** Admin > Attendance > "Show QR code" on a session opens a full-screen code to project. Scanning it opens /checkin with the service code filled in; the person only types their phone number.
 - **Events:** Admin > Events > "QR check-in" shows a code for /event-checkin?e=<event>. People enter their phone number; registered people are marked present, and walk-ins add their name and are recorded as present. Opens 3 hours before the event starts and closes 12 hours after.
 - **Alumni:** /alumni now has two buttons at the top ("join the list" and "find a mentor"). Share https://dcf-unn-site.vercel.app/alumni#join with graduates.
+
+## Phase 18 – Automatic welcome email
+
+When someone registers as a member, they get a welcome email within seconds (meeting times, plus links to Freshers, Academics, Events and Care).
+- Only people who ticked email consent and have not opted out. One email per member, ever.
+- The daily job (08:00 Lagos) also sends any that were missed.
+- Switch it on/off in Admin > Messages > Automations ("welcome" rule: automatic + email).
+- Until a domain and Resend are set up, Gmail may put it in spam.
